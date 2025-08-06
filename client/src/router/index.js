@@ -5,13 +5,27 @@ import History from '../views/History.vue'
 const routes = [
   {
     path: '/',
-    name: 'Home',
+    redirect: '/functional/generate'
+  },
+  {
+    path: '/functional/generate',
+    name: 'FunctionalGenerate',
     component: Home
   },
   {
-    path: '/history',
-    name: 'History',
+    path: '/functional/history',
+    name: 'FunctionalHistory',
     component: History
+  },
+  {
+    path: '/api/test',
+    name: 'ApiTest',
+    component: () => import('../views/ApiTest.vue')
+  },
+  {
+    path: '/api/docs',
+    name: 'ApiDocs',
+    component: () => import('../views/ApiDocs.vue')
   }
 ]
 

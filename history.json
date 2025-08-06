@@ -1,5 +1,13 @@
 [
   {
+    "id": 1754483143415,
+    "title": "AI写作-权限管理",
+    "description": "AI写作-权限管理\n\n一、需求背景\n\nAI写作由探索广场转移至工作台后，作为【写作agent】，与原有的【自主规划agent】同级，需要增加对写作agent的权限分配。\n\n二、需求说明\n\n2.1 权限...",
+    "createTime": 1754483143415,
+    "downloadUrl": "/api/download/test-cases-1754483143415.xmind",
+    "fileName": "test-cases-1754483143415.xmind"
+  },
+  {
     "id": 1754398100868,
     "title": "输入框限制100字",
     "description": "输入框限制100字",

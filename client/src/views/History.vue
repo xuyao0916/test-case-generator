@@ -67,9 +67,24 @@ export default {
       try {
         const response = await axios.get('/api/history')
         this.historyList = response.data.data || []
+        
+        // 如果历史记录为空，显示提示信息
+        if (this.historyList.length === 0) {
+          console.log('暂无历史记录')
+        }
       } catch (error) {
         console.error('加载历史记录失败:', error)
-        this.$message.error('加载历史记录失败')
+        // 设置为空数组，显示空状态
+        this.historyList = []
+        
+        // 根据错误类型显示不同的提示
+        if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+          this.$message.warning('无法连接到服务器，请检查后端服务是否启动')
+        } else if (error.response && error.response.status === 404) {
+          this.$message.warning('API接口不存在')
+        } else {
+          this.$message.error('加载历史记录失败，请稍后重试')
+        }
       } finally {
         this.loading = false
       }

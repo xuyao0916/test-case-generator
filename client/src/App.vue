@@ -5,7 +5,7 @@
         <h1>测试用例自动生成平台</h1>
       </el-header>
       <el-container>
-        <el-aside width="200px" class="sidebar">
+        <el-aside width="220px" class="sidebar">
           <el-menu
             :default-active="$route.path"
             router
@@ -13,15 +13,37 @@
             background-color="#f5f7fa"
             text-color="#606266"
             active-text-color="#409EFF"
+            :default-openeds="['functional', 'api']"
           >
-            <el-menu-item index="/">
-              <el-icon><DocumentAdd /></el-icon>
-              <span>用例生成</span>
-            </el-menu-item>
-            <el-menu-item index="/history">
-              <el-icon><Clock /></el-icon>
-              <span>生成记录</span>
-            </el-menu-item>
+            <el-sub-menu index="functional">
+              <template #title>
+                <el-icon><Tools /></el-icon>
+                <span>功能测试</span>
+              </template>
+              <el-menu-item index="/functional/generate">
+                <el-icon><DocumentAdd /></el-icon>
+                <span>用例生成</span>
+              </el-menu-item>
+              <el-menu-item index="/functional/history">
+                <el-icon><Clock /></el-icon>
+                <span>生成记录</span>
+              </el-menu-item>
+            </el-sub-menu>
+            
+            <el-sub-menu index="api">
+              <template #title>
+                <el-icon><Connection /></el-icon>
+                <span>接口测试</span>
+              </template>
+              <el-menu-item index="/api/test">
+                <el-icon><Position /></el-icon>
+                <span>接口测试</span>
+              </el-menu-item>
+              <el-menu-item index="/api/docs">
+                <el-icon><Document /></el-icon>
+                <span>API文档</span>
+              </el-menu-item>
+            </el-sub-menu>
           </el-menu>
         </el-aside>
         <el-main>
@@ -33,13 +55,17 @@
 </template>
 
 <script>
-import { DocumentAdd, Clock } from '@element-plus/icons-vue'
+import { DocumentAdd, Clock, Tools, Connection, Position, Document } from '@element-plus/icons-vue'
 
 export default {
   name: 'App',
   components: {
     DocumentAdd,
-    Clock
+    Clock,
+    Tools,
+    Connection,
+    Position,
+    Document
   }
 }
 </script>
@@ -85,10 +111,17 @@ body {
 }
 
 .sidebar-menu .el-menu-item {
-  height: 50px;
-  line-height: 50px;
-  margin: 5px 10px;
-  border-radius: 8px;
+  height: 45px;
+  line-height: 45px;
+  margin: 2px 8px;
+  border-radius: 6px;
+}
+
+.sidebar-menu .el-sub-menu .el-menu-item {
+  height: 40px;
+  line-height: 40px;
+  margin: 2px 12px;
+  padding-left: 40px !important;
 }
 
 .sidebar-menu .el-menu-item:hover {
@@ -102,6 +135,22 @@ body {
 
 .sidebar-menu .el-menu-item.is-active .el-icon {
   color: white;
+}
+
+.sidebar-menu .el-sub-menu__title {
+  height: 50px;
+  line-height: 50px;
+  margin: 5px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.sidebar-menu .el-sub-menu__title:hover {
+  background-color: #ecf5ff;
+}
+
+.sidebar-menu .el-sub-menu.is-opened .el-sub-menu__title {
+  background-color: #e6f7ff;
 }
 
 </style>
