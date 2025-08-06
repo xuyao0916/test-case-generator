@@ -275,6 +275,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // 添加表单数据解析
 app.use(express.static('public'));
 
+// 服务前端构建文件
+app.use(express.static(path.join(__dirname, 'client/dist')));
+
 // 配置文件上传
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -443,6 +446,12 @@ app.get('/api/download/:filename', async (req, res) => {
 // 健康检查
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: '测试用例生成平台运行正常' });
+});
+
+// 处理前端路由，所有非API请求都返回index.html（必须放在所有API路由之后）
+app.get('*', (req, res) => {
+  // 返回前端应用的index.html
+  res.sendFile(path.join(__dirname, 'client/dist/index.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
