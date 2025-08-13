@@ -199,7 +199,7 @@ export default {
       if (status >= 400) return 'danger'
       return 'info'
     }
-    
+
     return {
       testForm,
       loading,

@@ -13,7 +13,7 @@
             background-color="#f5f7fa"
             text-color="#606266"
             active-text-color="#409EFF"
-            :default-openeds="['functional', 'api']"
+            :default-openeds="['functional', 'converter', 'api']"
           >
             <el-sub-menu index="functional">
               <template #title>
@@ -30,6 +30,17 @@
               </el-menu-item>
             </el-sub-menu>
             
+            <el-sub-menu index="converter">
+               <template #title>
+                 <el-icon><SwitchIcon /></el-icon>
+                 <span>格式转换</span>
+               </template>
+              <el-menu-item index="/converter/format">
+                <el-icon><Upload /></el-icon>
+                <span>格式转换</span>
+              </el-menu-item>
+            </el-sub-menu>
+            
             <el-sub-menu index="api">
               <template #title>
                 <el-icon><Connection /></el-icon>
@@ -38,6 +49,10 @@
               <el-menu-item index="/api/test">
                 <el-icon><Position /></el-icon>
                 <span>接口测试</span>
+              </el-menu-item>
+              <el-menu-item index="/api/generate">
+                <el-icon><Magic /></el-icon>
+                <span>用例生成</span>
               </el-menu-item>
               <el-menu-item index="/api/docs">
                 <el-icon><Document /></el-icon>
@@ -55,7 +70,7 @@
 </template>
 
 <script>
-import { DocumentAdd, Clock, Tools, Connection, Position, Document } from '@element-plus/icons-vue'
+import { DocumentAdd, Clock, Tools, Connection, Position, Document, Magic, Switch as SwitchIcon, Upload } from '@element-plus/icons-vue'
 
 export default {
   name: 'App',
@@ -65,7 +80,10 @@ export default {
     Tools,
     Connection,
     Position,
-    Document
+    Document,
+    Magic,
+    SwitchIcon,
+    Upload
   }
 }
 </script>
