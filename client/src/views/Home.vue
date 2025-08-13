@@ -8,41 +8,27 @@
         </div>
       </template>
 
-      <!-- 生成按钮 -->
+      <!-- 输入区域 -->
       <div class="input-section">
-        <el-tabs v-model="activeTab" class="input-tabs">
-          <el-tab-pane label="文件上传" name="file">
-            <el-upload
-              ref="uploadRef"
-              class="upload-demo"
-              drag
-              :auto-upload="false"
-              :on-change="handleFileChange"
-              :file-list="fileList"
-              accept=".txt,.md,.js,.py,.java,.cpp,.c,.html,.css,.json,.xml,.doc,.docx,.pdf"
-            >
-              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-              <div class="el-upload__text">
-                将文件拖到此处，或<em>点击上传</em>
-              </div>
-              <template #tip>
-                <div class="el-upload__tip">
-                  支持 txt/md/js/py/java/cpp/c/html/css/json/xml/doc/docx/pdf 等格式文件
-                </div>
-              </template>
-            </el-upload>
-          </el-tab-pane>
-
-          <el-tab-pane label="文本输入" name="text">
-            <el-input
-              v-model="textInput"
-              type="textarea"
-              :rows="8"
-              placeholder="请输入需要生成测试用例的代码或需求描述..."
-              class="text-input"
-            />
-          </el-tab-pane>
-        </el-tabs>
+        <div class="input-header">
+          <h3>文本输入</h3>
+          <el-alert
+            title="文件上传功能后续支持"
+            type="info"
+            :closable="false"
+            show-icon
+            class="upload-notice"
+          >
+            当前版本仅支持文本输入生成测试用例，文件上传功能将在后续版本中提供。
+          </el-alert>
+        </div>
+        <el-input
+          v-model="textInput"
+          type="textarea"
+          :rows="10"
+          placeholder="请输入需要生成测试用例的需求描述或功能说明...\n\n例如：\n- 输入框只能输入1-10的数字\n- 用户登录功能验证\n- 购物车添加商品功能"
+          class="text-input"
+        />
       </div>
 
       <!-- 生成按钮 -->
@@ -102,9 +88,7 @@ export default {
   name: 'Home',
   data() {
     return {
-      activeTab: 'text',
       textInput: '',
-      fileList: [],
       loading: false,
       result: '',
       downloadUrl: ''
@@ -112,34 +96,21 @@ export default {
   },
   computed: {
     canGenerate() {
-      return (this.activeTab === 'text' && this.textInput.trim()) ||
-             (this.activeTab === 'file' && this.fileList.length > 0)
+      return this.textInput.trim().length > 0
     }
   },
   methods: {
-    handleFileChange(file, fileList) {
-      this.fileList = fileList
-    },
-
     async generateTestCases() {
       this.loading = true
       this.result = ''
       this.downloadUrl = ''
 
       try {
-        const formData = new FormData()
-
-        if (this.activeTab === 'file' && this.fileList.length > 0) {
-          formData.append('file', this.fileList[0].raw)
-        }
-
-        if (this.activeTab === 'text' && this.textInput.trim()) {
-          formData.append('textInput', this.textInput)
-        }
-
-        const response = await axios.post('/api/generate', formData, {
+        const response = await axios.post('/api/generate', {
+          content: this.textInput
+        }, {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': 'application/json'
           }
         })
 
@@ -259,12 +230,18 @@ export default {
   margin-bottom: 20px;
 }
 
-.input-tabs {
-  min-height: 200px;
+.input-header {
+  margin-bottom: 15px;
 }
 
-.upload-demo {
-  width: 100%;
+.input-header h3 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-size: 18px;
+}
+
+.upload-notice {
+  margin-bottom: 15px;
 }
 
 .text-input {
@@ -298,29 +275,5 @@ export default {
   font-size: 14px;
   line-height: 1.6;
   color: #2c3e50;
-}
-
-.el-icon--upload {
-  font-size: 67px;
-  color: #c0c4cc;
-  margin: 40px 0 16px;
-  line-height: 50px;
-}
-
-.el-upload__text {
-  color: #606266;
-  font-size: 14px;
-  text-align: center;
-}
-
-.el-upload__text em {
-  color: #409eff;
-  font-style: normal;
-}
-
-.el-upload__tip {
-  font-size: 12px;
-  color: #606266;
-  margin-top: 7px;
 }
 </style>
