@@ -575,6 +575,7 @@ app.post('/api/generate', upload.single('file'), async (req, res) => {
   console.log('收到生成请求:', req.body);
   try {
     let inputContent = '';
+    const apiProvider = req.body.apiProvider || 'cybotstar'; // 默认使用Cybotstar
     
     // 处理文件上传
     if (req.file) {
@@ -598,52 +599,136 @@ app.post('/api/generate', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: '请提供输入内容或上传文件' });
     }
     
-    console.log('准备调用Cybotstar API，输入内容长度:', inputContent.length);
+    console.log(`准备调用${apiProvider}API，输入内容长度:`, inputContent.length);
     
-    // 临时使用模拟响应来测试功能
     let generatedContent;
     
-    try {
+    if (apiProvider === 'deepseek') {
+      // 调用DeepSeek API
+      try {
+        const response = await axios.post(DEEPSEEK_API_URL, {
+          model: 'deepseek-chat',
+          messages: [
+            {
+              role: 'system',
+              content: `# 需求分析师兼测试用例设计专家
+                        ## Background
+                        - 用户需针对**RAG结合大语言模型（LLM）的应用项目**，完成需求分析并生成功能测试用例，为项目启动阶段提供关键依据
+                        - 核心目标：明确项目目标、范围、需求细节，识别潜在风险点与待确认项，同时输出可执行的高质量测试用例，覆盖多测试维度
+                        ## Profile
+                        - 资深需求分析师兼功能测试用例设计专家，具备项目管理经验与技术洞察力
+                        - 擅长挖掘RAG&LLM类项目的隐性需求，精准识别技术风险，提出可落地的待确认项
+                        - 精通测试用例设计方法（正常流程/异常流程/边界值测试等），能结合RAG&LLM技术特点设计针对性测试用例
+                        ## Skills
+                        - 需求收集与拆解能力、风险评估能力、Markdown文档编写能力
+                        - 测试用例设计（含功能/性能/安全维度）、系统思维与逻辑分析能力
+                        - 深入理解RAG检索机制、LLM生成逻辑及两类技术结合的应用场景
+                        ## Goals
+                        - 基于用户提供的项目背景/初步需求，输出“标题-步骤-结果”结构化的需求分析与测试用例文档
+                        - 确保测试用例100%覆盖需求点，且每个用例按规范标注优先级（P1-核心/高风险、P2-重要/中风险、P3-辅助/低风险）
+                        ## Constrains
+                        - 需求分析需完整无遗漏，测试用例需符合以下严格格式：
+                          * 用例标题：TC-P[优先级]：用例标题（例：TC-P1：RAG文档检索结果准确性验证）
+                          * 前置条件（PC）：需与测试步骤同级，无则标注“无”
+                          * 测试步骤：每个步骤必须对应1个预期结果（步骤-结果一一绑定）
+                          * 测试数据：需提供具体示例（如“测试文档：含100条医疗领域问答的TXT文件；检索关键词：‘糖尿病用药禁忌’”）
+                        - 功能测试需覆盖正常流程、异常流程（如文档格式错误、检索无结果）、边界值（如超长文档、高频并发检索）
+                        ## 输出结构要求（核心：标题→步骤→结果）
+                        ### 核心标题：[项目名称]RAG&LLM应用需求分析与功能测试用例文档
+                        #### 步骤1：项目需求收集与拆解（基于用户提供的背景/初步需求）
+                        - 结果：输出《需求清单》，包含：
+                          1. 功能需求（如“文档上传与解析功能”“RAG实时检索功能”“LLM答案生成功能”）
+                          2. 非功能需求（如“检索响应时间≤3秒”“LLM生成内容准确率≥90%”“支持同时上传10个≤50MB的文档”）
+                          3. 隐性需求（如“检索结果支持溯源显示”“LLM生成内容避免敏感信息”）
+                        #### 步骤2：风险点与待确认项识别（结合RAG&LLM技术特性）
+                        - 结果：输出《风险与待确认项清单》，包含：
+                          1. 风险点（如“RAG对特殊格式文档（PDF扫描件）解析成功率低”“高并发下LLM生成响应延迟超阈值”）
+                          2. 待确认项（如“用户是否要求RAG检索结果支持按相关性排序”“LLM生成内容是否需对接企业知识库校准”）
+                        #### 步骤3：测试用例设计（覆盖需求清单中所有功能/非功能点）
+                        - 结果：输出《功能测试用例初稿》，每个用例严格遵循以下格式：
+                          ## TC-P[优先级]：用例标题
+                          **PC（前置条件）：** （例：“已部署RAG&LLM测试环境，上传10条教育领域文档”）
+                          **测试步骤：**
+                          1. 步骤1描述（例：“在检索框输入关键词‘初中数学函数定义’，点击检索按钮”）
+                          **预期结果1：** 对应步骤1的结果（例：“3秒内返回5条相关文档，且每条结果标注来源文档名称与页码”）
+                          2. 步骤2描述（例：“选择第3条检索结果，点击‘生成总结’按钮”）
+                          **预期结果2：** 对应步骤2的结果（例：“LLM生成200字以内总结，内容与检索结果核心信息一致，无事实错误”）
+                          **测试数据：** （例：“检索关键词：‘初中数学函数定义’；测试文档：《初中数学教材（七年级下）.pdf》”）
+                        #### 步骤4：测试用例优先级分配（按风险与功能重要性）
+                        - 结果：输出《优先级标注后的测试用例终稿》，每个用例明确标注优先级，且满足：
+                          1. P1用例（≥30%）：覆盖核心功能/高风险点（如“RAG检索结果准确性”“LLM生成内容无敏感信息”）
+                          2. P2用例（≥50%）：覆盖重要功能/中风险点（如“文档上传格式兼容性”“检索结果排序正确性”）
+                          3. P3用例（≤20%）：覆盖辅助功能/低风险点（如“检索历史记录删除功能”“界面字体大小调整功能”）
+                        #### 步骤5：文档整合与格式规范（Markdown格式）
+                        - 结果：输出完整的《[项目名称]RAG&LLM应用需求分析与功能测试用例文档（Markdown版）》，包含：
+                          1. 需求分析部分（需求清单、风险与待确认项清单）
+                          2. 测试用例部分（按优先级分类的所有测试用例，格式统一且可直接执行）
+                          3. 无任何下载链接或文档下载相关内容`
+            },
+            {
+              role: 'user',
+              content: `请为以下功能生成测试用例：\n\n${inputContent}`
+            }
+          ],
+          stream: false
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          timeout: 600000
+        });
+        
+        console.log('DeepSeek API调用成功');
+        generatedContent = response.data.choices[0].message.content;
+        
+      } catch (apiError) {
+        console.log('DeepSeek API调用失败，使用模拟响应:', apiError.message);
+        generatedContent = `# 测试用例生成结果\n\n## 功能描述\n${inputContent}\n\n## 测试用例\n\n### 测试用例1：正常功能测试\n**测试步骤：**\n1. 准备测试数据\n2. 执行功能操作\n3. 验证结果\n\n**预期结果：**\n功能正常执行，返回预期结果\n\n### 测试用例2：边界条件测试\n**测试步骤：**\n1. 使用边界值进行测试\n2. 验证系统处理\n\n**预期结果：**\n系统能正确处理边界情况\n\n### 测试用例3：异常情况测试\n**测试步骤：**\n1. 输入异常数据\n2. 观察系统响应\n\n**预期结果：**\n系统能优雅处理异常情况并给出适当提示\n\n---\n*注意：由于网络连接问题，当前使用本地生成的测试用例模板。请检查网络连接后重试以获得AI生成的个性化测试用例。*`;
+      }
+    } else {
       // 调用Cybotstar API
-      const response = await axios.post(CYBOTSTAR_API_URL, {
-        username: CYBOTSTAR_USERNAME,
-        question: `请为以下内容生成测试用例：\n\n${inputContent}`
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'cybertron-robot-key': CYBOTSTAR_ROBOT_KEY,
-          'cybertron-robot-token': CYBOTSTAR_ROBOT_TOKEN
-        },
-        timeout: 600000 // 10分钟超时
-      });
-      
-      console.log('Cybotstar API调用成功');
-      console.log('API响应数据:', JSON.stringify(response.data, null, 2));
-      
-      // 从Cybotstar API响应中提取内容
-      if (response.data && response.data.data && response.data.data.answer) {
-        generatedContent = response.data.data.answer;
-      } else {
-        generatedContent = response.data.answer || response.data.content || response.data.result;
+      try {
+        const response = await axios.post(CYBOTSTAR_API_URL, {
+          username: CYBOTSTAR_USERNAME,
+          question: `请为以下内容生成测试用例：\n\n${inputContent}`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'cybertron-robot-key': CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': CYBOTSTAR_ROBOT_TOKEN
+          },
+          timeout: 600000 // 10分钟超时
+        });
+        
+        console.log('Cybotstar API调用成功');
+        console.log('API响应数据:', JSON.stringify(response.data, null, 2));
+        
+        // 从Cybotstar API响应中提取内容
+        if (response.data && response.data.data && response.data.data.answer) {
+          generatedContent = response.data.data.answer;
+        } else {
+          generatedContent = response.data.answer || response.data.content || response.data.result;
+        }
+        
+        if (!generatedContent || typeof generatedContent !== 'string') {
+          console.log('警告: 无法从API响应中提取有效字符串内容，使用模拟响应');
+          throw new Error('API响应中未找到有效内容');
+        }
+        
+        console.log('成功提取内容，长度:', generatedContent.length);
+        
+      } catch (apiError) {
+        console.log('Cybotstar API调用失败，使用模拟响应:', apiError.message);
+        console.log('错误详情:', {
+          code: apiError.code,
+          response: apiError.response?.status,
+          responseData: apiError.response?.data
+        });
+        
+        // 使用模拟响应
+        generatedContent = `# 测试用例生成结果\n\n## 功能描述\n${inputContent}\n\n## 测试用例\n\n### 测试用例1：正常功能测试\n**测试步骤：**\n1. 准备测试数据\n2. 执行功能操作\n3. 验证结果\n\n**预期结果：**\n功能正常执行，返回预期结果\n\n### 测试用例2：边界条件测试\n**测试步骤：**\n1. 使用边界值进行测试\n2. 验证系统处理\n\n**预期结果：**\n系统能正确处理边界情况\n\n### 测试用例3：异常情况测试\n**测试步骤：**\n1. 输入异常数据\n2. 观察系统响应\n\n**预期结果：**\n系统能优雅处理异常情况并给出适当提示\n\n---\n*注意：由于网络连接问题，当前使用本地生成的测试用例模板。请检查网络连接后重试以获得AI生成的个性化测试用例。*`;
       }
-      
-      if (!generatedContent || typeof generatedContent !== 'string') {
-        console.log('警告: 无法从API响应中提取有效字符串内容，使用模拟响应');
-        throw new Error('API响应中未找到有效内容');
-      }
-      
-      console.log('成功提取内容，长度:', generatedContent.length);
-      
-    } catch (apiError) {
-      console.log('Cybotstar API调用失败，使用模拟响应:', apiError.message);
-      console.log('错误详情:', {
-        code: apiError.code,
-        response: apiError.response?.status,
-        responseData: apiError.response?.data
-      });
-      
-      // 使用模拟响应
-      generatedContent = `# 测试用例生成结果\n\n## 功能描述\n${inputContent}\n\n## 测试用例\n\n### 测试用例1：正常功能测试\n**测试步骤：**\n1. 准备测试数据\n2. 执行功能操作\n3. 验证结果\n\n**预期结果：**\n功能正常执行，返回预期结果\n\n### 测试用例2：边界条件测试\n**测试步骤：**\n1. 使用边界值进行测试\n2. 验证系统处理\n\n**预期结果：**\n系统能正确处理边界情况\n\n### 测试用例3：异常情况测试\n**测试步骤：**\n1. 输入异常数据\n2. 观察系统响应\n\n**预期结果：**\n系统能优雅处理异常情况并给出适当提示\n\n---\n*注意：由于网络连接问题，当前使用本地生成的测试用例模板。请检查网络连接后重试以获得AI生成的个性化测试用例。*`;
     }
     
     // 保存生成的内容到XMind文件

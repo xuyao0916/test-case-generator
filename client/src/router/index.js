@@ -4,7 +4,7 @@ const routes = [
   {
     path: '/functional/generate',
     name: 'FunctionalGenerate',
-    component: () => import('../views/Home.vue')
+    component: () => import('../views/TestCaseGenerator.vue')
   },
   {
     path: '/functional/history',
