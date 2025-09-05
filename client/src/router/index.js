@@ -7,9 +7,24 @@ const routes = [
     component: () => import('../views/TestCaseGenerator.vue')
   },
   {
+    path: '/functional/step-by-step',
+    name: 'StepByStepGenerate',
+    component: () => import('../views/StepByStepGenerator.vue')
+  },
+  {
     path: '/functional/history',
     name: 'FunctionalHistory',
     component: () => import('../views/History.vue')
+  },
+  {
+    path: '/review/testcase',
+    name: 'TestCaseReview',
+    component: () => import('../views/TestCaseReview.vue')
+  },
+  {
+    path: '/review/requirement',
+    name: 'RequirementReview',
+    component: () => import('../views/RequirementReview.vue')
   },
   {
     path: '/converter/format',

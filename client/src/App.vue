@@ -13,7 +13,7 @@
             background-color="#f5f7fa"
             text-color="#606266"
             active-text-color="#409EFF"
-            :default-openeds="['functional', 'converter', 'api']"
+            :default-openeds="['functional', 'review', 'converter', 'api']"
           >
             <el-sub-menu index="functional">
               <template #title>
@@ -22,11 +22,30 @@
               </template>
               <el-menu-item index="/functional/generate">
                 <el-icon><DocumentAdd /></el-icon>
-                <span>用例生成</span>
+                <span>快速生成</span>
+              </el-menu-item>
+              <el-menu-item index="/functional/step-by-step">
+                <el-icon><Operation /></el-icon>
+                <span>分步骤生成</span>
               </el-menu-item>
               <el-menu-item index="/functional/history">
                 <el-icon><Clock /></el-icon>
                 <span>生成记录</span>
+              </el-menu-item>
+            </el-sub-menu>
+            
+            <el-sub-menu index="review">
+              <template #title>
+                <el-icon><Search /></el-icon>
+                <span>评审模块</span>
+              </template>
+              <el-menu-item index="/review/testcase">
+                <el-icon><DocumentCheck /></el-icon>
+                <span>用例评审</span>
+              </el-menu-item>
+              <el-menu-item index="/review/requirement">
+                <el-icon><Document /></el-icon>
+                <span>需求评审</span>
               </el-menu-item>
             </el-sub-menu>
             
@@ -70,7 +89,7 @@
 </template>
 
 <script>
-import { DocumentAdd, Clock, Tools, Connection, Position, Document, Magic, Switch as SwitchIcon, Upload } from '@element-plus/icons-vue'
+import { DocumentAdd, Clock, Tools, Connection, Position, Document, Magic, Switch as SwitchIcon, Upload, Operation, Search, DocumentCheck } from '@element-plus/icons-vue'
 
 export default {
   name: 'App',
@@ -83,7 +102,10 @@ export default {
     Document,
     Magic,
     SwitchIcon,
-    Upload
+    Upload,
+    Operation,
+    Search,
+    DocumentCheck
   }
 }
 </script>

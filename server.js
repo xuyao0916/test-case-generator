@@ -549,7 +549,8 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB
+    fileSize: 10 * 1024 * 1024, // 10MB per file
+    files: 10 // 最多10个文件
   }
 });
 
@@ -942,6 +943,661 @@ app.post('/api/convert-format', upload.single('file'), async (req, res) => {
     });
   }
 });
+
+// 分步骤生成 - 需求分析接口
+app.post('/api/step-by-step/analyze', upload.array('files', 10), async (req, res) => {
+  try {
+    const { textInput, apiProvider = 'deepseek' } = req.body;
+    let content = textInput || '';
+    
+    // 处理多个文件上传
+    if (req.files && req.files.length > 0) {
+      let allFileContent = '';
+      for (const file of req.files) {
+        const fileContent = await parseUploadedFile(file.path, file.originalname);
+        allFileContent += `\n\n=== ${file.originalname} ===\n${fileContent}`;
+        // 删除临时文件
+        await fs.remove(file.path);
+      }
+      content = allFileContent + '\n\n' + content;
+    }
+    
+    if (!content.trim()) {
+      return res.status(400).json({ error: '请提供需求内容或上传文件' });
+    }
+    
+    let analysisResult;
+    
+    if (apiProvider === 'cybotstar') {
+      // Cybotstar API 调用
+      try {
+        const cybotstarResponse = await axios.post(`${process.env.CYBOTSTAR_API_URL}/openapi/v1/conversation/dialog/`, {
+          username: process.env.CYBOTSTAR_USERNAME,
+          question: `请对以下需求进行详细分析，包括功能模块、业务流程、用户角色等方面：\n\n${content}`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'cybertron-robot-key': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_KEY,
+            'cybertron-robot-token': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_TOKEN,
+            'username': process.env.CYBOTSTAR_USERNAME
+          },
+          timeout: 60000
+        });
+        
+        if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
+          analysisResult = cybotstarResponse.data.data.answer;
+        } else {
+          throw new Error('Cybotstar API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('Cybotstar API调用失败:', apiError.message);
+        throw apiError;
+      }
+    } else {
+      // DeepSeek API 调用
+      try {
+        const deepseekResponse = await axios.post(DEEPSEEK_API_URL, {
+          model: 'deepseek-chat',
+          messages: [{
+            role: 'system',
+            content: '你是一个专业的需求分析师，擅长分析软件需求并提取关键信息。'
+          }, {
+            role: 'user',
+            content: `请对以下需求进行详细分析，包括：\n1. 功能模块划分\n2. 主要业务流程\n3. 用户角色和权限\n4. 关键功能点\n5. 数据流向\n\n需求内容：\n${content}`
+          }],
+          temperature: 0.7,
+          max_tokens: 2000
+        }, {
+          headers: {
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000
+        });
+        
+        if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
+          analysisResult = deepseekResponse.data.choices[0].message.content;
+        } else {
+          throw new Error('DeepSeek API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('DeepSeek API调用失败:', apiError.message);
+        throw apiError;
+      }
+    }
+    
+    res.json({
+      success: true,
+      analysis: analysisResult,
+      originalContent: content
+    });
+    
+  } catch (error) {
+    console.error('需求分析失败:', error);
+    
+    // 模拟分析结果
+    const mockAnalysis = `## 需求分析结果\n\n### 1. 功能模块划分\n- 用户管理模块\n- 数据处理模块\n- 界面展示模块\n\n### 2. 主要业务流程\n- 用户登录验证\n- 数据输入处理\n- 结果展示输出\n\n### 3. 用户角色和权限\n- 普通用户：基础功能使用\n- 管理员：系统配置管理\n\n### 4. 关键功能点\n- 数据验证\n- 错误处理\n- 用户体验优化\n\n### 5. 数据流向\n输入 → 验证 → 处理 → 存储 → 展示`;
+    
+    res.json({
+      success: true,
+      analysis: mockAnalysis,
+      originalContent: req.body.textInput || '模拟需求内容',
+      mock: true
+    });
+  }
+});
+
+// 分步骤生成 - 需求补充接口
+app.post('/api/step-by-step/supplement', upload.array('files', 10), async (req, res) => {
+  try {
+    const { originalAnalysis, supplementText, apiProvider = 'deepseek' } = req.body;
+    let supplementContent = supplementText || '';
+    
+    // 处理多个文件上传
+    if (req.files && req.files.length > 0) {
+      let allFileContent = '';
+      for (const file of req.files) {
+        const fileContent = await parseUploadedFile(file.path, file.originalname);
+        allFileContent += `\n\n=== ${file.originalname} ===\n${fileContent}`;
+        await fs.remove(file.path);
+      }
+      supplementContent = allFileContent + '\n\n' + supplementContent;
+    }
+    
+    if (!supplementContent.trim()) {
+      // 如果没有补充内容，直接返回原分析结果
+      return res.json({
+        success: true,
+        updatedAnalysis: originalAnalysis,
+        hasUpdate: false
+      });
+    }
+    
+    let updatedAnalysis;
+    
+    if (apiProvider === 'cybotstar') {
+      try {
+        const cybotstarResponse = await axios.post(`${process.env.CYBOTSTAR_API_URL}/openapi/v1/conversation/dialog/`, {
+          username: process.env.CYBOTSTAR_USERNAME,
+          question: `请作为专业的需求分析师，基于以下原始需求分析和补充信息，提供一个完整详细的更新后需求分析报告。请直接输出分析结果，不要提示信息不完整或要求更多信息。\n\n原始分析：\n${originalAnalysis}\n\n补充信息：\n${supplementContent}\n\n请提供完整的更新后需求分析：`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'cybertron-robot-key': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_KEY,
+            'cybertron-robot-token': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_TOKEN,
+            'username': process.env.CYBOTSTAR_USERNAME
+          },
+          timeout: 60000
+        });
+        
+        if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
+          updatedAnalysis = cybotstarResponse.data.data.answer;
+        } else {
+          throw new Error('Cybotstar API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('Cybotstar API调用失败:', apiError.message);
+        throw apiError;
+      }
+    } else {
+      try {
+        const deepseekResponse = await axios.post(DEEPSEEK_API_URL, {
+          model: 'deepseek-chat',
+          messages: [{
+            role: 'system',
+            content: '你是一个专业的需求分析师，擅长根据补充信息更新和完善需求分析。'
+          }, {
+            role: 'user',
+            content: `基于以下原始需求分析，结合新的补充信息，更新和完善需求分析：\n\n原始分析：\n${originalAnalysis}\n\n补充信息：\n${supplementContent}`
+          }],
+          temperature: 0.7,
+          max_tokens: 2000
+        }, {
+          headers: {
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000
+        });
+        
+        if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
+          updatedAnalysis = deepseekResponse.data.choices[0].message.content;
+        } else {
+          throw new Error('DeepSeek API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('DeepSeek API调用失败:', apiError.message);
+        throw apiError;
+      }
+    }
+    
+    res.json({
+      success: true,
+      updatedAnalysis: updatedAnalysis,
+      hasUpdate: true
+    });
+    
+  } catch (error) {
+    console.error('需求补充失败:', error);
+    
+    // 模拟更新结果
+    const mockUpdate = req.body.originalAnalysis + '\n\n## 补充信息\n\n根据新增的补充信息，进一步完善了需求分析，增加了更多细节和考虑因素。';
+    
+    res.json({
+      success: true,
+      updatedAnalysis: mockUpdate,
+      hasUpdate: true,
+      mock: true
+    });
+  }
+});
+
+// 分步骤生成 - 测试点生成接口
+app.post('/api/step-by-step/test-points', async (req, res) => {
+  try {
+    const { analysisContent, apiProvider = 'deepseek' } = req.body;
+    
+    if (!analysisContent || !analysisContent.trim()) {
+      return res.status(400).json({ error: '请提供需求分析内容' });
+    }
+    
+    let testPoints;
+    
+    if (apiProvider === 'cybotstar') {
+      try {
+        const cybotstarResponse = await axios.post(`${process.env.CYBOTSTAR_API_URL}/openapi/v1/conversation/dialog/`, {
+          username: process.env.CYBOTSTAR_USERNAME,
+          question: `基于以下需求分析，生成详细的测试点列表，包括功能测试点、边界测试点、异常测试点等：\n\n${analysisContent}`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'cybertron-robot-key': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_KEY,
+            'cybertron-robot-token': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_TOKEN,
+            'username': process.env.CYBOTSTAR_USERNAME
+          },
+          timeout: 60000
+        });
+        
+        if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
+          testPoints = cybotstarResponse.data.data.answer;
+        } else {
+          throw new Error('Cybotstar API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('Cybotstar API调用失败:', apiError.message);
+        throw apiError;
+      }
+    } else {
+      try {
+        const deepseekResponse = await axios.post(DEEPSEEK_API_URL, {
+          model: 'deepseek-chat',
+          messages: [{
+            role: 'system',
+            content: '你是一个专业的测试工程师，擅长根据需求分析生成全面的测试点。'
+          }, {
+            role: 'user',
+            content: `基于以下需求分析，生成详细的测试点列表，包括：\n1. 功能测试点\n2. 边界测试点\n3. 异常测试点\n4. 性能测试点\n5. 安全测试点\n\n需求分析：\n${analysisContent}`
+          }],
+          temperature: 0.7,
+          max_tokens: 2000
+        }, {
+          headers: {
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000
+        });
+        
+        if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
+          testPoints = deepseekResponse.data.choices[0].message.content;
+        } else {
+          throw new Error('DeepSeek API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('DeepSeek API调用失败:', apiError.message);
+        throw apiError;
+      }
+    }
+    
+    res.json({
+      success: true,
+      testPoints: testPoints
+    });
+    
+  } catch (error) {
+    console.error('测试点生成失败:', error);
+    
+    // 模拟测试点
+    const mockTestPoints = `## 测试点列表\n\n### 1. 功能测试点\n- 用户登录功能验证\n- 数据输入功能验证\n- 数据保存功能验证\n- 数据查询功能验证\n\n### 2. 边界测试点\n- 输入字段长度边界测试\n- 数值范围边界测试\n- 文件大小边界测试\n\n### 3. 异常测试点\n- 网络异常处理测试\n- 数据库连接异常测试\n- 非法输入处理测试\n\n### 4. 性能测试点\n- 响应时间测试\n- 并发用户测试\n- 系统负载测试\n\n### 5. 安全测试点\n- 权限验证测试\n- 数据加密测试\n- SQL注入防护测试`;
+    
+    res.json({
+      success: true,
+      testPoints: mockTestPoints,
+      mock: true
+    });
+  }
+});
+
+// 分步骤生成 - 最终测试用例生成接口
+app.post('/api/step-by-step/generate-final', async (req, res) => {
+  try {
+    const { analysisContent, testPoints, apiProvider = 'deepseek' } = req.body;
+    
+    if (!analysisContent || !testPoints) {
+      return res.status(400).json({ error: '请提供需求分析内容和测试点' });
+    }
+    
+    let testCases;
+    
+    if (apiProvider === 'cybotstar') {
+      try {
+        const cybotstarResponse = await axios.post(`${process.env.CYBOTSTAR_API_URL}/openapi/v1/conversation/dialog/`, {
+          username: process.env.CYBOTSTAR_USERNAME,
+          question: `基于以下需求分析和测试点，生成详细的功能测试用例，包括测试步骤、预期结果等：\n\n需求分析：\n${analysisContent}\n\n测试点：\n${testPoints}`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'cybertron-robot-key': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_KEY,
+            'cybertron-robot-token': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_TOKEN,
+            'username': process.env.CYBOTSTAR_USERNAME
+          },
+          timeout: 60000
+        });
+        
+        if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
+          testCases = cybotstarResponse.data.data.answer;
+        } else {
+          throw new Error('Cybotstar API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('Cybotstar API调用失败:', apiError.message);
+        throw apiError;
+      }
+    } else {
+      try {
+        const deepseekResponse = await axios.post(DEEPSEEK_API_URL, {
+          model: 'deepseek-chat',
+          messages: [{
+            role: 'system',
+            content: '你是一个专业的测试工程师，擅长编写详细的功能测试用例。请按照标准的测试用例格式生成内容。'
+          }, {
+            role: 'user',
+            content: `基于以下需求分析和测试点，生成详细的功能测试用例，包括测试步骤、预期结果等：\n\n需求分析：\n${analysisContent}\n\n测试点：\n${testPoints}`
+          }],
+          temperature: 0.7,
+          max_tokens: 3000
+        }, {
+          headers: {
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000
+        });
+        
+        if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
+          testCases = deepseekResponse.data.choices[0].message.content;
+        } else {
+          throw new Error('DeepSeek API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('DeepSeek API调用失败:', apiError.message);
+        throw apiError;
+      }
+    }
+    
+    // 生成XMind文件
+    const xmindContent = await convertToXMindXML(testCases);
+    const timestamp = Date.now();
+    const filename = `step_by_step_testcases_${timestamp}.xmind`;
+    const filePath = path.join(__dirname, 'generated', filename);
+    
+    await generateXMindFile(xmindContent, filePath);
+    
+    // 提取标题
+    const titleMatch = testCases.match(/^#\s*(.+)$/m);
+    const title = titleMatch ? titleMatch[1] : `分步骤测试用例_${new Date().toLocaleString()}`;
+    
+    // 保存历史记录
+    const historyItem = {
+      id: timestamp,
+      title: title,
+      content: testCases,
+      filename: filename,
+      timestamp: new Date().toISOString(),
+      type: 'step-by-step'
+    };
+    
+    const historyPath = path.join(__dirname, 'history.json');
+    let history = [];
+    if (await fs.pathExists(historyPath)) {
+      history = await fs.readJson(historyPath);
+    }
+    history.unshift(historyItem);
+    await fs.writeJson(historyPath, history);
+    
+    res.json({
+      success: true,
+      content: testCases,
+      filename: filename,
+      title: title
+    });
+    
+  } catch (error) {
+    console.error('最终测试用例生成失败:', error);
+    
+    // 模拟测试用例
+    const mockTestCases = `# 功能测试用例\n\n## 测试用例1：用户登录功能\n\n**测试目的：** 验证用户登录功能的正确性\n\n**前置条件：** 用户已注册且账号状态正常\n\n**测试步骤：**\n1. 打开登录页面\n2. 输入正确的用户名和密码\n3. 点击登录按钮\n\n**预期结果：** 登录成功，跳转到主页面\n\n## 测试用例2：数据输入功能\n\n**测试目的：** 验证数据输入功能的正确性\n\n**前置条件：** 用户已登录系统\n\n**测试步骤：**\n1. 进入数据输入页面\n2. 填写必填字段\n3. 点击保存按钮\n\n**预期结果：** 数据保存成功，显示成功提示`;
+    
+    const timestamp = Date.now();
+    const filename = `step_by_step_testcases_${timestamp}.xmind`;
+    
+    res.json({
+      success: true,
+      content: mockTestCases,
+      filename: filename,
+      title: '分步骤测试用例（模拟）',
+      mock: true
+    });
+  }
+});
+
+// 分布生成测试用例API
+app.post('/api/generate-distributed', upload.single('file'), async (req, res) => {
+  try {
+    const { apiProvider = 'cybotstar', splitStrategy = 'by_function', concurrency = 2 } = req.body;
+    let inputContent = '';
+    
+    // 处理文件上传或文本输入
+    if (req.file) {
+      inputContent = await parseUploadedFile(req.file);
+    } else {
+      inputContent = req.body.content || '';
+    }
+    
+    if (!inputContent.trim()) {
+      return res.status(400).json({ success: false, error: '请提供需求内容或上传文件' });
+    }
+    
+    console.log('开始分布生成测试用例...');
+    console.log('拆分策略:', splitStrategy);
+    console.log('并发数量:', concurrency);
+    
+    // 根据拆分策略分割内容
+    let contentParts = [];
+    if (splitStrategy === 'by_function') {
+      // 按功能模块拆分
+      const sections = inputContent.split(/\n\s*(?=##|功能|模块|Feature|Module)/i);
+      contentParts = sections.filter(part => part.trim().length > 0);
+    } else if (splitStrategy === 'by_paragraph') {
+      // 按段落拆分
+      const paragraphs = inputContent.split(/\n\s*\n/);
+      contentParts = paragraphs.filter(part => part.trim().length > 0);
+    } else {
+      // 按行数拆分
+      const lines = inputContent.split('\n');
+      const linesPerPart = Math.ceil(lines.length / parseInt(concurrency));
+      for (let i = 0; i < lines.length; i += linesPerPart) {
+        contentParts.push(lines.slice(i, i + linesPerPart).join('\n'));
+      }
+    }
+    
+    // 限制并发数量
+    const actualConcurrency = Math.min(parseInt(concurrency), contentParts.length);
+    const results = [];
+    
+    // 分批处理
+    for (let i = 0; i < contentParts.length; i += actualConcurrency) {
+      const batch = contentParts.slice(i, i + actualConcurrency);
+      const batchPromises = batch.map(async (part, index) => {
+        try {
+          let generatedContent = '';
+          
+          if (apiProvider === 'deepseek') {
+            const response = await callDeepSeekAPI(part);
+            generatedContent = response;
+          } else {
+            // 使用Cybotstar API
+            const response = await axios.post('https://www.cybotstar.cn/openapi/v1/conversation/dialog/', {
+              username: process.env.CYBOTSTAR_USERNAME,
+              token: process.env.CYBOTSTAR_TOKEN,
+              content: `请为以下需求生成详细的测试用例：\n\n${part}`
+            }, {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.CYBOTSTAR_API_KEY}`
+              },
+              timeout: 300000
+            });
+            
+            if (response.data && response.data.data && response.data.data.answer) {
+              generatedContent = response.data.data.answer;
+            } else {
+              generatedContent = response.data.answer || response.data.content || response.data.result;
+            }
+          }
+          
+          return {
+            index: i + index,
+            content: generatedContent,
+            originalPart: part.substring(0, 100) + '...'
+          };
+        } catch (error) {
+          console.error(`分片 ${i + index} 生成失败:`, error.message);
+          return {
+            index: i + index,
+            content: `# 测试用例分片 ${i + index + 1}\n\n## 原始需求\n${part}\n\n## 测试用例\n\n### 测试用例1：基本功能测试\n**测试步骤：**\n1. 准备测试环境\n2. 执行功能操作\n3. 验证结果\n\n**预期结果：**\n功能正常执行\n\n*注意：此为模拟生成的测试用例，请根据实际需求调整。*`,
+            originalPart: part.substring(0, 100) + '...',
+            error: true
+          };
+        }
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      
+      // 发送进度更新（这里简化处理，实际可以使用WebSocket）
+      console.log(`已完成 ${results.length}/${contentParts.length} 个分片`);
+    }
+    
+    // 合并结果
+    const combinedContent = results
+      .sort((a, b) => a.index - b.index)
+      .map((result, index) => `# 测试用例分片 ${index + 1}\n\n${result.content}`)
+      .join('\n\n---\n\n');
+    
+    // 生成XMind文件
+    const timestamp = Date.now();
+    const fileName = `distributed-test-cases-${timestamp}.xmind`;
+    await generateXMindFile(combinedContent, fileName);
+    
+    // 保存历史记录
+    const title = `分布生成测试用例-${new Date().toLocaleString('zh-CN')}`;
+    const historyRecord = {
+      id: timestamp,
+      title: title,
+      description: `使用${splitStrategy}策略，${actualConcurrency}个并发生成`,
+      createTime: timestamp,
+      downloadUrl: `/api/download/${fileName}`,
+      fileName: fileName,
+      type: 'distributed'
+    };
+    
+    saveHistory(historyRecord);
+    
+    res.json({
+      success: true,
+      content: combinedContent,
+      downloadUrl: `/api/download/${fileName}`,
+      results: results,
+      totalParts: contentParts.length,
+      strategy: splitStrategy,
+      concurrency: actualConcurrency
+    });
+    
+  } catch (error) {
+    console.error('分布生成测试用例失败:', error.message);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || '分布生成测试用例失败，请稍后重试' 
+    });
+  }
+});
+
+// 用例评审API
+app.post('/api/review-testcase', upload.single('file'), async (req, res) => {
+  console.log('收到用例评审请求:', req.body);
+  try {
+    const { textInput, apiProvider = 'deepseek', reviewCriteria } = req.body;
+    let content = textInput || '';
+    
+    // 处理文件上传
+    if (req.file) {
+      const fileContent = await parseUploadedFile(req.file.path, req.file.originalname);
+      content = fileContent + '\n\n' + content;
+      // 删除临时文件
+      await fs.remove(req.file.path);
+    }
+    
+    if (!content.trim()) {
+      return res.status(400).json({ error: '请提供测试用例内容或上传文件' });
+    }
+    
+    let reviewResult;
+    
+    if (apiProvider === 'cybotstar') {
+      // Cybotstar API 调用
+      try {
+        const cybotstarResponse = await axios.post(CYBOTSTAR_API_URL, {
+          username: CYBOTSTAR_USERNAME,
+          question: `请对以下测试用例进行专业评审，评审标准：${reviewCriteria || '完整性、准确性、可执行性、覆盖度'}\n\n测试用例内容：\n${content}`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'cybertron-robot-key': CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': CYBOTSTAR_ROBOT_TOKEN
+          },
+          timeout: 60000
+        });
+        
+        if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
+          reviewResult = cybotstarResponse.data.data.answer;
+        } else {
+          throw new Error('Cybotstar API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('Cybotstar API调用失败，使用模拟响应:', apiError.message);
+        reviewResult = generateMockReviewResult(content, reviewCriteria);
+      }
+    } else {
+      // DeepSeek API 调用
+      try {
+        const deepseekResponse = await axios.post(DEEPSEEK_API_URL, {
+          model: 'deepseek-chat',
+          messages: [{
+            role: 'system',
+            content: '你是一位资深的测试专家，擅长评审测试用例的质量。请从以下维度对测试用例进行专业评审：1. 完整性（是否包含必要的测试步骤、预期结果等）2. 准确性（测试逻辑是否正确）3. 可执行性（是否具备可操作性）4. 覆盖度（是否覆盖主要功能和异常场景）5. 规范性（格式是否标准）。请给出具体的评审意见和改进建议。'
+          }, {
+            role: 'user',
+            content: `请对以下测试用例进行评审，评审标准：${reviewCriteria || '完整性、准确性、可执行性、覆盖度、规范性'}\n\n测试用例内容：\n${content}`
+          }],
+          stream: false
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          timeout: 300000
+        });
+        
+        reviewResult = deepseekResponse.data.choices[0].message.content;
+      } catch (apiError) {
+        console.log('DeepSeek API调用失败，使用模拟响应:', apiError.message);
+        reviewResult = generateMockReviewResult(content, reviewCriteria);
+      }
+    }
+    
+    res.json({
+      success: true,
+      reviewResult: reviewResult,
+      reviewCriteria: reviewCriteria || '完整性、准确性、可执行性、覆盖度、规范性',
+      timestamp: Date.now()
+    });
+    
+  } catch (error) {
+    console.error('用例评审失败:', error.message);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || '用例评审失败，请稍后重试' 
+    });
+  }
+});
+
+// 生成模拟评审结果的函数
+function generateMockReviewResult(content, criteria) {
+  const testCaseCount = (content.match(/测试用例|test case/gi) || []).length || 1;
+  
+  return `# 测试用例评审报告\n\n## 评审概述\n\n**评审时间**: ${new Date().toLocaleString('zh-CN')}\n**评审标准**: ${criteria || '完整性、准确性、可执行性、覆盖度、规范性'}\n**测试用例数量**: ${testCaseCount}\n\n## 评审结果\n\n### 1. 完整性评估 ⭐⭐⭐⭐\n\n**优点:**\n- 测试用例包含了基本的测试步骤\n- 大部分用例有明确的预期结果\n\n**改进建议:**\n- 建议补充前置条件和测试环境要求\n- 部分用例缺少详细的测试数据\n\n### 2. 准确性评估 ⭐⭐⭐⭐\n\n**优点:**\n- 测试逻辑基本正确\n- 测试步骤符合业务流程\n\n**改进建议:**\n- 建议验证某些边界条件的处理逻辑\n- 异常场景的测试可以更加详细\n\n### 3. 可执行性评估 ⭐⭐⭐\n\n**优点:**\n- 测试步骤描述相对清晰\n\n**改进建议:**\n- 建议提供更具体的操作步骤\n- 增加测试数据的具体示例\n- 明确测试环境的配置要求\n\n### 4. 覆盖度评估 ⭐⭐⭐\n\n**优点:**\n- 覆盖了主要的功能场景\n\n**改进建议:**\n- 建议增加更多的异常场景测试\n- 补充边界值测试用例\n- 考虑添加性能和安全性测试\n\n### 5. 规范性评估 ⭐⭐⭐⭐\n\n**优点:**\n- 整体格式较为规范\n- 用例编号和命名相对清晰\n\n**改进建议:**\n- 建议统一测试用例的格式模板\n- 增加优先级和测试类型标识\n\n## 总体评分\n\n**综合评分**: ⭐⭐⭐⭐ (4/5)\n\n## 主要改进建议\n\n1. **补充测试环境说明**: 明确测试环境的配置要求和前置条件\n2. **完善异常场景**: 增加更多的异常情况和边界值测试\n3. **优化测试步骤**: 提供更详细和具体的操作步骤\n4. **统一格式规范**: 建议使用标准的测试用例模板\n5. **增加测试数据**: 为每个测试用例提供具体的测试数据示例\n\n## 结论\n\n该测试用例集合整体质量良好，基本满足测试需求。建议按照上述改进建议进行优化，以提高测试用例的执行效率和测试覆盖度。\n\n---\n*注意：由于网络连接问题，当前使用本地生成的评审报告。请检查网络连接后重试以获得AI生成的个性化评审结果。*`;
+}
 
 // 健康检查
 app.get('/api/health', (req, res) => {
