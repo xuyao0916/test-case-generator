@@ -32,18 +32,8 @@
         <h3>选择输入方式</h3>
         <el-radio-group v-model="inputMode" class="mode-radio-group">
           <el-radio-button label="text">文本输入</el-radio-button>
-          <el-radio-button label="file" :disabled="selectedApi === 'cybotstar'">文件上传</el-radio-button>
+          <el-radio-button label="file">文件上传</el-radio-button>
         </el-radio-group>
-        <div v-if="selectedApi === 'cybotstar' && inputMode === 'file'" class="mode-notice">
-          <el-alert
-            title="该功能后续支持"
-            type="warning"
-            :closable="false"
-            show-icon
-          >
-            Cybotstar AI 暂不支持文件上传功能，请使用文本输入方式。
-          </el-alert>
-        </div>
       </div>
 
       <!-- 输入区域 -->
@@ -66,16 +56,6 @@
         <div v-if="inputMode === 'file'" class="file-upload-area">
           <div class="input-header">
             <h3>文件上传</h3>
-            <el-alert
-              title="文件上传功能后续支持"
-              type="info"
-              :closable="false"
-              show-icon
-              class="upload-notice"
-              v-if="selectedApi === 'cybotstar'"
-            >
-              当前版本仅支持文本输入生成测试用例，文件上传功能将在后续版本中提供。
-            </el-alert>
           </div>
           <el-upload
             ref="uploadRef"
@@ -87,7 +67,6 @@
             :file-list="fileList"
             accept=".txt,.md,.docx,.doc,.pdf,.xlsx,.xls,.json,.xml,.csv"
             :limit="1"
-            :disabled="selectedApi === 'cybotstar'"
           >
             <el-icon class="el-icon--upload"><upload-filled /></el-icon>
             <div class="el-upload__text">
@@ -182,16 +161,7 @@ export default {
       }
     }
   },
-  watch: {
-    selectedApi(newVal) {
-      // 当切换到Cybotstar且当前为文件上传模式时，自动切换到文本输入
-      if (newVal === 'cybotstar' && this.inputMode === 'file') {
-        this.inputMode = 'text'
-        this.fileList = []
-        this.uploadedFile = null
-      }
-    }
-  },
+
   methods: {
     async generateTestCases() {
       this.loading = true
