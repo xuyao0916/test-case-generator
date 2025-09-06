@@ -556,9 +556,23 @@ const upload = multer({
 
 // Cybotstar API配置
 const CYBOTSTAR_API_URL = process.env.CYBOTSTAR_API_URL || 'https://www.cybotstar.cn/openapi/v1/conversation/dialog/';
-const CYBOTSTAR_ROBOT_KEY = process.env.CYBOTSTAR_ROBOT_KEY;
-const CYBOTSTAR_ROBOT_TOKEN = process.env.CYBOTSTAR_ROBOT_TOKEN;
 const CYBOTSTAR_USERNAME = process.env.CYBOTSTAR_USERNAME;
+
+// 需求分析专用配置
+const DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_KEY = process.env.DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_KEY;
+const DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_TOKEN = process.env.DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_TOKEN;
+
+// 测试用例生成专用配置
+const CASE_GENERATION_CYBOTSTAR_ROBOT_KEY = process.env.CASE_GENERATION_CYBOTSTAR_ROBOT_KEY;
+const CASE_GENERATION_CYBOTSTAR_ROBOT_TOKEN = process.env.CASE_GENERATION_CYBOTSTAR_ROBOT_TOKEN;
+
+// 需求评审专用配置
+const DEMAND_REVIEW_CYBOTSTAR_ROBOT_KEY = process.env.DEMAND_REVIEW_CYBOTSTAR_ROBOT_KEY;
+const DEMAND_REVIEW_CYBOTSTAR_ROBOT_TOKEN = process.env.DEMAND_REVIEW_CYBOTSTAR_ROBOT_TOKEN;
+
+// 用例评审专用配置
+const CASE_REVIEW_CYBOTSTAR_ROBOT_KEY = process.env.CASE_REVIEW_CYBOTSTAR_ROBOT_KEY;
+const CASE_REVIEW_CYBOTSTAR_ROBOT_TOKEN = process.env.CASE_REVIEW_CYBOTSTAR_ROBOT_TOKEN;
 
 // DeepSeek API配置
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
@@ -566,9 +580,12 @@ const DEEPSEEK_API_URL = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.c
 
 console.log('API配置:', {
   url: CYBOTSTAR_API_URL,
-  keyExists: !!CYBOTSTAR_ROBOT_KEY,
-  tokenExists: !!CYBOTSTAR_ROBOT_TOKEN,
-  username: CYBOTSTAR_USERNAME
+  username: CYBOTSTAR_USERNAME,
+  demandAnalysisKeyExists: !!DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_KEY,
+  demandAnalysisTokenExists: !!DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_TOKEN,
+  caseGenerationKeyExists: !!CASE_GENERATION_CYBOTSTAR_ROBOT_KEY,
+  caseGenerationTokenExists: !!CASE_GENERATION_CYBOTSTAR_ROBOT_TOKEN,
+  deepseekKeyExists: !!DEEPSEEK_API_KEY
 });
 
 // 生成测试用例的API
@@ -696,8 +713,8 @@ app.post('/api/generate', upload.single('file'), async (req, res) => {
         }, {
           headers: {
             'Content-Type': 'application/json',
-            'cybertron-robot-key': CYBOTSTAR_ROBOT_KEY,
-            'cybertron-robot-token': CYBOTSTAR_ROBOT_TOKEN
+            'cybertron-robot-key': CASE_GENERATION_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': CASE_GENERATION_CYBOTSTAR_ROBOT_TOKEN
           },
           timeout: 600000 // 10分钟超时
         });
@@ -971,15 +988,14 @@ app.post('/api/step-by-step/analyze', upload.array('files', 10), async (req, res
     if (apiProvider === 'cybotstar') {
       // Cybotstar API 调用
       try {
-        const cybotstarResponse = await axios.post(`${process.env.CYBOTSTAR_API_URL}/openapi/v1/conversation/dialog/`, {
-          username: process.env.CYBOTSTAR_USERNAME,
+        const cybotstarResponse = await axios.post(CYBOTSTAR_API_URL, {
+          username: CYBOTSTAR_USERNAME,
           question: `请对以下需求进行详细分析，包括功能模块、业务流程、用户角色等方面：\n\n${content}`
         }, {
           headers: {
             'Content-Type': 'application/json',
-            'cybertron-robot-key': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_KEY,
-            'cybertron-robot-token': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_TOKEN,
-            'username': process.env.CYBOTSTAR_USERNAME
+            'cybertron-robot-key': DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_TOKEN
           },
           timeout: 60000
         });
@@ -1077,15 +1093,14 @@ app.post('/api/step-by-step/supplement', upload.array('files', 10), async (req, 
     
     if (apiProvider === 'cybotstar') {
       try {
-        const cybotstarResponse = await axios.post(`${process.env.CYBOTSTAR_API_URL}/openapi/v1/conversation/dialog/`, {
-          username: process.env.CYBOTSTAR_USERNAME,
+        const cybotstarResponse = await axios.post(CYBOTSTAR_API_URL, {
+          username: CYBOTSTAR_USERNAME,
           question: `请作为专业的需求分析师，基于以下原始需求分析和补充信息，提供一个完整详细的更新后需求分析报告。请直接输出分析结果，不要提示信息不完整或要求更多信息。\n\n原始分析：\n${originalAnalysis}\n\n补充信息：\n${supplementContent}\n\n请提供完整的更新后需求分析：`
         }, {
           headers: {
             'Content-Type': 'application/json',
-            'cybertron-robot-key': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_KEY,
-            'cybertron-robot-token': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_TOKEN,
-            'username': process.env.CYBOTSTAR_USERNAME
+            'cybertron-robot-key': DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_TOKEN
           },
           timeout: 60000
         });
@@ -1165,15 +1180,14 @@ app.post('/api/step-by-step/test-points', async (req, res) => {
     
     if (apiProvider === 'cybotstar') {
       try {
-        const cybotstarResponse = await axios.post(`${process.env.CYBOTSTAR_API_URL}/openapi/v1/conversation/dialog/`, {
-          username: process.env.CYBOTSTAR_USERNAME,
+        const cybotstarResponse = await axios.post(CYBOTSTAR_API_URL, {
+          username: CYBOTSTAR_USERNAME,
           question: `基于以下需求分析，生成详细的测试点列表，包括功能测试点、边界测试点、异常测试点等：\n\n${analysisContent}`
         }, {
           headers: {
             'Content-Type': 'application/json',
-            'cybertron-robot-key': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_KEY,
-            'cybertron-robot-token': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_TOKEN,
-            'username': process.env.CYBOTSTAR_USERNAME
+            'cybertron-robot-key': CASE_GENERATION_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': CASE_GENERATION_CYBOTSTAR_ROBOT_TOKEN
           },
           timeout: 60000
         });
@@ -1251,15 +1265,14 @@ app.post('/api/step-by-step/generate-final', async (req, res) => {
     
     if (apiProvider === 'cybotstar') {
       try {
-        const cybotstarResponse = await axios.post(`${process.env.CYBOTSTAR_API_URL}/openapi/v1/conversation/dialog/`, {
-          username: process.env.CYBOTSTAR_USERNAME,
+        const cybotstarResponse = await axios.post(CYBOTSTAR_API_URL, {
+          username: CYBOTSTAR_USERNAME,
           question: `基于以下需求分析和测试点，生成详细的功能测试用例，包括测试步骤、预期结果等：\n\n需求分析：\n${analysisContent}\n\n测试点：\n${testPoints}`
         }, {
           headers: {
             'Content-Type': 'application/json',
-            'cybertron-robot-key': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_KEY,
-            'cybertron-robot-token': process.env.CYBOTSTAR_REQUIREMENTS_ANALYSIS_ROBOT_TOKEN,
-            'username': process.env.CYBOTSTAR_USERNAME
+            'cybertron-robot-key': CASE_GENERATION_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': CASE_GENERATION_CYBOTSTAR_ROBOT_TOKEN
           },
           timeout: 60000
         });
@@ -1533,8 +1546,8 @@ app.post('/api/review-testcase', upload.single('file'), async (req, res) => {
         }, {
           headers: {
             'Content-Type': 'application/json',
-            'cybertron-robot-key': CYBOTSTAR_ROBOT_KEY,
-            'cybertron-robot-token': CYBOTSTAR_ROBOT_TOKEN
+            'cybertron-robot-key': CASE_REVIEW_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': CASE_REVIEW_CYBOTSTAR_ROBOT_TOKEN
           },
           timeout: 60000
         });
@@ -1609,6 +1622,101 @@ app.get('*', (req, res) => {
   // 返回前端应用的index.html
   res.sendFile(path.join(__dirname, 'client/dist/index.html'));
 });
+
+// 需求评审接口
+app.post('/api/requirement-review', upload.array('files', 10), async (req, res) => {
+  try {
+    const { content, apiProvider = 'cybotstar', reviewCriteria } = req.body;
+    let allContent = content || '';
+    
+    // 处理多个文件上传
+    if (req.files && req.files.length > 0) {
+      let allFileContent = '';
+      for (const file of req.files) {
+        const fileContent = await parseUploadedFile(file.path, file.originalname);
+        allFileContent += `\n\n=== ${file.originalname} ===\n${fileContent}`;
+        // 删除临时文件
+        await fs.remove(file.path);
+      }
+      allContent = allFileContent + '\n\n' + allContent;
+    }
+    
+    if (!allContent.trim()) {
+      return res.status(400).json({ error: '请提供需求内容或上传文件' });
+    }
+    
+    let reviewResult;
+    
+    if (apiProvider === 'cybotstar') {
+      try {
+        const cybotstarResponse = await axios.post(CYBOTSTAR_API_URL, {
+          username: CYBOTSTAR_USERNAME,
+          question: `请对以下需求文档进行专业评审，评审标准：${reviewCriteria || '完整性、准确性、可行性、一致性'}\n\n需求内容：\n${allContent}`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'cybertron-robot-key': DEMAND_REVIEW_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': DEMAND_REVIEW_CYBOTSTAR_ROBOT_TOKEN
+          },
+          timeout: 60000
+        });
+        
+        if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
+          reviewResult = cybotstarResponse.data.data.answer;
+        } else {
+          throw new Error('Cybotstar API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('Cybotstar API调用失败，使用模拟响应:', apiError.message);
+        reviewResult = generateMockRequirementReviewResult(allContent, reviewCriteria);
+      }
+    } else {
+      // DeepSeek API 调用
+      try {
+        const deepseekResponse = await axios.post(DEEPSEEK_API_URL, {
+          model: 'deepseek-chat',
+          messages: [{
+            role: 'system',
+            content: '你是一位资深的需求分析师，擅长评审需求文档的质量。请从以下维度对需求进行专业评审：1. 完整性（需求是否完整清晰）2. 准确性（需求描述是否准确）3. 可行性（技术实现可行性）4. 一致性（需求之间是否一致）5. 可测试性（需求是否可测试）。请给出具体的评审意见和改进建议。'
+          }, {
+            role: 'user',
+            content: `请对以下需求文档进行评审，评审标准：${reviewCriteria || '完整性、准确性、可行性、一致性、可测试性'}\n\n需求内容：\n${allContent}`
+          }],
+          stream: false
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          timeout: 300000
+        });
+        
+        if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
+          reviewResult = deepseekResponse.data.choices[0].message.content;
+        } else {
+          throw new Error('DeepSeek API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('DeepSeek API调用失败，使用模拟响应:', apiError.message);
+        reviewResult = generateMockRequirementReviewResult(allContent, reviewCriteria);
+      }
+    }
+    
+    res.json({
+      success: true,
+      reviewResult: reviewResult
+    });
+    
+  } catch (error) {
+    console.error('需求评审失败:', error);
+    res.status(500).json({ error: '需求评审失败，请稍后重试' });
+  }
+});
+
+// 生成模拟需求评审结果
+function generateMockRequirementReviewResult(content, criteria) {
+  return `# 需求评审报告\n\n## 评审概述\n本次评审基于以下标准：${criteria || '完整性、准确性、可行性、一致性、可测试性'}\n\n## 评审结果\n\n### 1. 完整性评估\n**评分**: 良好\n**评审意见**: 需求文档基本完整，包含了主要功能描述。\n**改进建议**: 建议补充非功能性需求和约束条件。\n\n### 2. 准确性评估\n**评分**: 良好\n**评审意见**: 需求描述相对准确，逻辑清晰。\n**改进建议**: 部分术语需要进一步明确定义。\n\n### 3. 可行性评估\n**评分**: 良好\n**评审意见**: 从技术角度看，需求具备实现可行性。\n**改进建议**: 建议评估资源和时间约束。\n\n### 4. 一致性评估\n**评分**: 中等\n**评审意见**: 大部分需求保持一致。\n**改进建议**: 需要检查并解决潜在的需求冲突。\n\n### 5. 可测试性评估\n**评分**: 良好\n**评审意见**: 需求具备可测试性。\n**改进建议**: 建议明确验收标准。\n\n## 总体评价\n需求文档质量良好，建议按照上述改进建议进行优化。\n\n---\n*注意：由于网络问题，当前显示模拟评审结果。*`;
+}
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`服务器运行在端口 ${PORT}`);

@@ -3,117 +3,191 @@
     <el-card class="main-card" shadow="hover">
       <template #header>
         <div class="card-header">
-          <h2><el-icon><Document /></el-icon> 用例评审</h2>
-          <p class="card-subtitle">上传测试用例文件，AI智能体将为您提供专业的评审意见</p>
+          <h2><el-icon><Document /></el-icon> 测试用例评审</h2>
+          <p class="subtitle">分步骤进行测试用例评审，获得专业的AI评审报告</p>
         </div>
       </template>
 
-      <!-- 功能描述 -->
-      <div class="feature-description">
-        <el-alert
-          title="用例评审功能"
-          type="info"
-          description="支持上传各种格式的测试用例文件，AI将从用例完整性、覆盖度、可执行性等多个维度进行专业评审，并提供改进建议。"
-          show-icon
-          :closable="false"
-        />
+      <!-- 步骤指示器 -->
+      <div class="steps-container">
+        <el-steps :active="currentStep" finish-status="success" align-center>
+          <el-step title="需求文档" description="上传需求文档或输入需求描述" />
+          <el-step title="测试用例" description="上传测试用例或输入测试用例" />
+          <el-step title="评审结果" description="查看AI评审报告" />
+        </el-steps>
       </div>
 
-      <!-- AI服务选择 -->
-      <div class="api-selection">
-        <h3>选择AI服务</h3>
-        <el-radio-group v-model="selectedApi" class="api-radio-group">
-          <el-radio-button label="cybotstar">Cybotstar AI</el-radio-button>
-          <el-radio-button label="deepseek">DeepSeek AI</el-radio-button>
-        </el-radio-group>
-        <div class="api-description">
-          <span v-if="selectedApi === 'cybotstar'" class="api-desc">
-            <el-icon><Star /></el-icon> 使用Cybotstar AI进行用例评审，专业的测试用例分析能力
-          </span>
-          <span v-if="selectedApi === 'deepseek'" class="api-desc">
-            <el-icon><Cpu /></el-icon> 使用DeepSeek AI进行用例评审，强大的逻辑分析和建议能力
-          </span>
+      <!-- 步骤1: 需求文档 -->
+      <div v-if="currentStep === 0" class="step-content">
+        <!-- AI服务选择 -->
+        <div class="api-selection">
+          <h3><el-icon><Star /></el-icon> 选择AI服务</h3>
+          <el-radio-group v-model="selectedApi" class="api-options">
+            <el-radio-button label="cybotstar">
+              <el-icon><Cpu /></el-icon>
+              Cybotstar AI
+            </el-radio-button>
+            <el-radio-button label="deepseek">
+              <el-icon><Cpu /></el-icon>
+              DeepSeek AI
+            </el-radio-button>
+          </el-radio-group>
+        </div>
+
+        <!-- 需求文档上传 -->
+        <div class="upload-section">
+          <h3><el-icon><UploadFilled /></el-icon> 上传需求文档</h3>
+          <el-upload
+            ref="requirementUploadRef"
+            class="upload-demo"
+            drag
+            :file-list="requirementFileList"
+            :on-change="handleRequirementFileChange"
+            :on-remove="handleRequirementFileRemove"
+            :auto-upload="false"
+            accept=".txt,.doc,.docx,.pdf,.xls,.xlsx"
+            :limit="10"
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">
+              将需求文档拖到此处，或<em>点击上传</em>
+            </div>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持 txt/doc/docx/pdf/xls/xlsx 格式文件，最多上传10个文件，单个文件大小不超过10MB
+              </div>
+            </template>
+          </el-upload>
+        </div>
+
+        <!-- 需求描述输入 -->
+        <div class="input-section">
+          <h3>或者直接输入需求描述</h3>
+          <el-input
+            v-model="requirementContent"
+            type="textarea"
+            :rows="8"
+            placeholder="请输入需求描述内容..."
+            show-word-limit
+            maxlength="10000"
+          />
+        </div>
+
+        <!-- 步骤1操作按钮 -->
+        <div class="step-actions">
+          <el-button
+            type="primary"
+            size="large"
+            @click="nextStep"
+            :disabled="!canProceedToStep2"
+          >
+            下一步：上传测试用例
+          </el-button>
         </div>
       </div>
 
-      <!-- 文件上传区域 -->
-      <div class="upload-section">
-        <h3>上传测试用例文件</h3>
-        <div class="upload-tip">
-          <p>支持多种格式的测试用例文件，包括Excel、XMind、Word、文本等格式</p>
+      <!-- 步骤2: 测试用例 -->
+      <div v-if="currentStep === 1" class="step-content">
+        <!-- 测试用例上传 -->
+        <div class="upload-section">
+          <h3><el-icon><UploadFilled /></el-icon> 上传测试用例</h3>
+          <el-upload
+            ref="testCaseUploadRef"
+            class="upload-demo"
+            drag
+            :file-list="testCaseFileList"
+            :on-change="handleTestCaseFileChange"
+            :on-remove="handleTestCaseFileRemove"
+            :auto-upload="false"
+            accept=".txt,.doc,.docx,.pdf,.xls,.xlsx"
+            :limit="10"
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">
+              将测试用例文件拖到此处，或<em>点击上传</em>
+            </div>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持 txt/doc/docx/pdf/xls/xlsx 格式文件，最多上传10个文件，单个文件大小不超过10MB
+              </div>
+            </template>
+          </el-upload>
         </div>
-        
-        <el-upload
-          ref="uploadRef"
-          class="upload-demo"
-          drag
-          :auto-upload="false"
-          :on-change="handleFileChange"
-          :on-remove="handleFileRemove"
-          :file-list="fileList"
-          accept=".txt,.md,.docx,.doc,.pdf,.xlsx,.xls,.xmind,.json,.xml,.csv"
-          :limit="1"
-        >
-          <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-          <div class="el-upload__text">
-            将测试用例文件拖到此处，或<em>点击上传</em>
-          </div>
-          <div class="el-upload__tip">
-            支持 .txt, .md, .docx, .doc, .pdf, .xlsx, .xls, .xmind, .json, .xml, .csv 格式
-          </div>
-        </el-upload>
+
+        <!-- 测试用例输入 -->
+        <div class="input-section">
+          <h3>或者直接输入测试用例</h3>
+          <el-input
+            v-model="testCaseContent"
+            type="textarea"
+            :rows="8"
+            placeholder="请输入测试用例内容..."
+            show-word-limit
+            maxlength="10000"
+          />
+        </div>
+
+        <!-- 评审配置 -->
+        <div class="config-section">
+          <h3>评审配置</h3>
+          <el-form :model="reviewForm" label-width="120px">
+            <el-form-item label="评审维度">
+              <el-checkbox-group v-model="reviewForm.dimensions">
+                <el-checkbox label="completeness">完整性</el-checkbox>
+                <el-checkbox label="coverage">覆盖度</el-checkbox>
+                <el-checkbox label="executability">可执行性</el-checkbox>
+                <el-checkbox label="clarity">清晰度</el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+            <el-form-item label="评审深度">
+              <el-radio-group v-model="reviewForm.depth">
+                <el-radio label="basic">基础评审</el-radio>
+                <el-radio label="detailed">详细评审</el-radio>
+                <el-radio label="comprehensive">全面评审</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="特殊要求">
+              <el-input
+                v-model="reviewForm.requirements"
+                type="textarea"
+                :rows="3"
+                placeholder="请输入特殊评审要求（可选）"
+              />
+            </el-form-item>
+          </el-form>
+        </div>
+
+        <!-- 步骤2操作按钮 -->
+        <div class="step-actions">
+          <el-button size="large" @click="prevStep">
+            上一步
+          </el-button>
+          <el-button
+            type="primary"
+            size="large"
+            :loading="loading"
+            @click="startReview"
+            :disabled="!canStartReview"
+          >
+            <el-icon v-if="!loading"><Search /></el-icon>
+            {{ loading ? '评审中...' : '开始评审' }}
+          </el-button>
+        </div>
       </div>
 
-      <!-- 评审配置 -->
-      <div class="review-config" v-if="fileList.length > 0">
-        <h3>评审配置</h3>
-        <el-form :model="reviewForm" label-width="120px">
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="评审维度">
-                <el-checkbox-group v-model="reviewForm.dimensions">
-                  <el-checkbox label="completeness">完整性</el-checkbox>
-                  <el-checkbox label="coverage">覆盖度</el-checkbox>
-                  <el-checkbox label="executability">可执行性</el-checkbox>
-                  <el-checkbox label="clarity">清晰度</el-checkbox>
-                </el-checkbox-group>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="评审深度">
-                <el-radio-group v-model="reviewForm.depth">
-                  <el-radio label="basic">基础评审</el-radio>
-                  <el-radio label="detailed">详细评审</el-radio>
-                  <el-radio label="comprehensive">全面评审</el-radio>
-                </el-radio-group>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-form-item label="特殊要求">
-            <el-input
-              v-model="reviewForm.requirements"
-              type="textarea"
-              :rows="3"
-              placeholder="请输入特殊的评审要求或关注点（可选）"
-            />
-          </el-form-item>
-        </el-form>
+      <!-- 步骤3: 评审结果 -->
+      <div v-if="currentStep === 2" class="step-content">
+        <!-- 重新开始按钮 -->
+        <div class="restart-section">
+          <el-button @click="restartReview" size="large">
+            重新开始评审
+          </el-button>
+        </div>
       </div>
+    </el-card>
 
-      <!-- 开始评审按钮 -->
-      <div class="action-section" v-if="fileList.length > 0">
-        <el-button
-          type="primary"
-          size="large"
-          :loading="loading"
-          @click="startReview"
-          class="review-btn"
-        >
-          <el-icon v-if="!loading"><Search /></el-icon>
-          {{ loading ? '评审中...' : '开始评审' }}
-        </el-button>
-      </div>
-
+    <!-- 评审进度和结果显示区域 -->
+    <div v-if="currentStep === 2">
       <!-- 评审进度 -->
       <el-card v-if="showProgress" class="progress-card" shadow="hover">
         <template #header>
@@ -183,12 +257,12 @@
           </el-tabs>
         </div>
       </el-card>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Document, Star, Cpu, UploadFilled, Search, Download, CopyDocument } from '@element-plus/icons-vue'
 import axios from 'axios'
@@ -206,7 +280,11 @@ export default {
   },
   setup() {
     const selectedApi = ref('cybotstar')
-    const fileList = ref([])
+    const currentStep = ref(0)
+    const requirementFileList = ref([])
+    const testCaseFileList = ref([])
+    const requirementContent = ref('')
+    const testCaseContent = ref('')
     const loading = ref(false)
     const showProgress = ref(false)
     const progress = ref(0)
@@ -222,22 +300,74 @@ export default {
       requirements: ''
     })
 
-    const uploadRef = ref(null)
+    const requirementUploadRef = ref(null)
+    const testCaseUploadRef = ref(null)
 
-    // 处理文件变化
-    const handleFileChange = (file) => {
-      fileList.value = [file]
+    // 计算属性：是否可以进入第二步
+    const canProceedToStep2 = computed(() => {
+      return requirementFileList.value.length > 0 || requirementContent.value.trim().length > 0
+    })
+
+    // 计算属性：是否可以开始评审
+    const canStartReview = computed(() => {
+      return testCaseFileList.value.length > 0 || testCaseContent.value.trim().length > 0
+    })
+
+    // 步骤控制
+    const nextStep = () => {
+      if (currentStep.value < 2) {
+        currentStep.value++
+      }
     }
 
-    // 处理文件移除
-    const handleFileRemove = () => {
-      fileList.value = []
+    const prevStep = () => {
+      if (currentStep.value > 0) {
+        currentStep.value--
+      }
+    }
+
+    // 重新开始评审
+    const restartReview = () => {
+      currentStep.value = 0
+      requirementFileList.value = []
+      testCaseFileList.value = []
+      requirementContent.value = ''
+      testCaseContent.value = ''
+      reviewResult.value = null
+      showProgress.value = false
+      progress.value = 0
+    }
+
+    // 处理需求文档文件变化
+    const handleRequirementFileChange = (file) => {
+      requirementFileList.value.push(file)
+    }
+
+    // 处理需求文档文件移除
+    const handleRequirementFileRemove = (file) => {
+      const index = requirementFileList.value.findIndex(f => f.uid === file.uid)
+      if (index > -1) {
+        requirementFileList.value.splice(index, 1)
+      }
+    }
+
+    // 处理测试用例文件变化
+    const handleTestCaseFileChange = (file) => {
+      testCaseFileList.value.push(file)
+    }
+
+    // 处理测试用例文件移除
+    const handleTestCaseFileRemove = (file) => {
+      const index = testCaseFileList.value.findIndex(f => f.uid === file.uid)
+      if (index > -1) {
+        testCaseFileList.value.splice(index, 1)
+      }
     }
 
     // 开始评审
     const startReview = async () => {
-      if (fileList.value.length === 0) {
-        ElMessage.warning('请先上传测试用例文件')
+      if (testCaseFileList.value.length === 0 && testCaseContent.value.trim().length === 0) {
+        ElMessage.warning('请先上传测试用例文件或输入测试用例内容')
         return
       }
 
@@ -249,7 +379,23 @@ export default {
 
       try {
         const formData = new FormData()
-        formData.append('file', fileList.value[0].raw)
+        
+        // 添加需求文档
+        requirementFileList.value.forEach((file, index) => {
+          formData.append('requirementFiles', file.raw)
+        })
+        if (requirementContent.value.trim()) {
+          formData.append('requirementContent', requirementContent.value)
+        }
+        
+        // 添加测试用例
+        testCaseFileList.value.forEach((file, index) => {
+          formData.append('testCaseFiles', file.raw)
+        })
+        if (testCaseContent.value.trim()) {
+          formData.append('testCaseContent', testCaseContent.value)
+        }
+        
         formData.append('apiProvider', selectedApi.value)
         formData.append('dimensions', JSON.stringify(reviewForm.dimensions))
         formData.append('depth', reviewForm.depth)
@@ -290,6 +436,7 @@ export default {
             suggestions: response.data.suggestions
           }
           downloadUrl.value = response.data.downloadUrl
+          currentStep.value = 2 // 跳转到结果页面
           ElMessage.success('用例评审完成')
         } else {
           throw new Error(response.data.error || '评审失败')
@@ -310,6 +457,7 @@ export default {
           issueCount: 8,
           suggestions: '## 改进建议\n\n1. **增加边界值测试**\n   - 建议添加最大值、最小值、临界值的测试用例\n   - 特别关注数值型输入的边界情况\n\n2. **完善异常处理测试**\n   - 增加非法输入的测试用例\n   - 添加系统异常情况的处理验证\n\n3. **优化测试步骤描述**\n   - 使测试步骤更加具体和可操作\n   - 明确每个步骤的预期结果\n\n4. **补充前置条件**\n   - 详细描述测试环境要求\n   - 明确测试数据准备步骤'
         }
+        currentStep.value = 2 // 跳转到结果页面
       } finally {
         loading.value = false
         setTimeout(() => {
@@ -367,7 +515,11 @@ export default {
 
     return {
       selectedApi,
-      fileList,
+      currentStep,
+      requirementFileList,
+      testCaseFileList,
+      requirementContent,
+      testCaseContent,
       loading,
       showProgress,
       progress,
@@ -377,9 +529,17 @@ export default {
       downloadUrl,
       activeTab,
       reviewForm,
-      uploadRef,
-      handleFileChange,
-      handleFileRemove,
+      requirementUploadRef,
+      testCaseUploadRef,
+      canProceedToStep2,
+      canStartReview,
+      nextStep,
+      prevStep,
+      restartReview,
+      handleRequirementFileChange,
+      handleRequirementFileRemove,
+      handleTestCaseFileChange,
+      handleTestCaseFileRemove,
       startReview,
       downloadResult,
       copyToClipboard,
@@ -404,27 +564,30 @@ export default {
 }
 
 .card-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  text-align: center;
 }
 
 .card-header h2 {
-  margin: 0;
+  margin: 0 0 8px 0;
+  color: #303133;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  color: #303133;
 }
 
-.card-subtitle {
+.subtitle {
   margin: 0;
-  color: #909399;
+  color: #606266;
   font-size: 14px;
 }
 
-.feature-description {
-  margin-bottom: 24px;
+.steps-container {
+  margin-bottom: 32px;
+}
+
+.step-content {
+  margin-top: 24px;
 }
 
 .api-selection {
@@ -434,21 +597,13 @@ export default {
 .api-selection h3 {
   margin: 0 0 12px 0;
   color: #303133;
-}
-
-.api-radio-group {
-  margin-bottom: 12px;
-}
-
-.api-description {
-  color: #606266;
-  font-size: 14px;
-}
-
-.api-desc {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+}
+
+.api-options {
+  margin-bottom: 12px;
 }
 
 .upload-section {
@@ -458,42 +613,44 @@ export default {
 .upload-section h3 {
   margin: 0 0 12px 0;
   color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.upload-tip {
-  margin-bottom: 16px;
-  color: #606266;
-  font-size: 14px;
-}
-
-.upload-demo {
-  width: 100%;
-}
-
-.review-config {
+.input-section {
   margin-bottom: 24px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
 }
 
-.review-config h3 {
-  margin: 0 0 16px 0;
+.input-section h3 {
+  margin: 0 0 12px 0;
   color: #303133;
 }
 
-.action-section {
-  text-align: center;
+.config-section {
   margin-bottom: 24px;
 }
 
-.review-btn {
-  padding: 12px 32px;
-  font-size: 16px;
+.config-section h3 {
+  margin: 0 0 12px 0;
+  color: #303133;
+}
+
+.step-actions {
+  text-align: center;
+  margin: 32px 0;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.restart-section {
+  text-align: center;
+  margin: 32px 0;
 }
 
 .progress-card {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .progress-content {
@@ -501,13 +658,14 @@ export default {
 }
 
 .progress-text {
-  margin-top: 12px;
+  margin-top: 10px;
   color: #606266;
-  font-size: 14px;
 }
 
-.result-card {
-  margin-bottom: 24px;
+.result-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .header-actions {
@@ -515,40 +673,21 @@ export default {
   gap: 8px;
 }
 
-.result-content {
-  margin-top: 16px;
-}
-
 .review-summary {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .review-content,
 .suggestions-content {
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
   line-height: 1.6;
-  white-space: pre-wrap;
+  color: #303133;
 }
 
-.review-content :deep(strong),
-.suggestions-content :deep(strong) {
-  color: #409eff;
-  font-weight: 600;
+.upload-demo {
+  width: 100%;
 }
 
-@media (max-width: 768px) {
-  .test-case-review {
-    padding: 12px;
-  }
-  
-  .card-header {
-    text-align: center;
-  }
-  
-  .header-actions {
-    flex-direction: column;
-  }
+.el-upload-dragger {
+  width: 100%;
 }
 </style>
