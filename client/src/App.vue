@@ -13,7 +13,7 @@
             background-color="#f5f7fa"
             text-color="#606266"
             active-text-color="#409EFF"
-            :default-openeds="['functional', 'review', 'converter', 'api']"
+            :default-openeds="['functional', 'review', 'tools', 'api']"
           >
             <el-sub-menu index="functional">
               <template #title>
@@ -49,15 +49,19 @@
               </el-menu-item>
             </el-sub-menu>
             
-            <el-sub-menu index="converter">
+            <el-sub-menu index="tools">
                <template #title>
                  <el-icon><SwitchIcon /></el-icon>
-                 <span>格式转换</span>
+                 <span>工具类</span>
                </template>
-              <el-menu-item index="/converter/format">
-                <el-icon><Upload /></el-icon>
-                <span>格式转换</span>
-              </el-menu-item>
+              <el-menu-item index="/tools/main">
+                 <el-icon><Upload /></el-icon>
+                 <span>格式转换</span>
+               </el-menu-item>
+               <el-menu-item index="/tools/main?tool=file-info">
+                 <el-icon><Document /></el-icon>
+                 <span>获取文件信息</span>
+               </el-menu-item>
             </el-sub-menu>
             
             <el-sub-menu index="api">
