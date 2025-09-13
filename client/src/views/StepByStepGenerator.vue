@@ -121,6 +121,15 @@
               {{ step1Loading ? '分析中...' : '开始需求分析' }}
             </el-button>
             <el-button
+              type="warning"
+              :loading="step1Loading"
+              @click="retryStep1"
+              v-if="step1Failed"
+            >
+              <el-icon v-if="!step1Loading"><Refresh /></el-icon>
+              {{ step1Loading ? '重试中...' : '重试' }}
+            </el-button>
+            <el-button
               type="success"
               @click="nextStep"
               :disabled="!step1Result"
@@ -230,6 +239,15 @@
               {{ step2Loading ? '分析中...' : '分析补充内容' }}
             </el-button>
             <el-button
+              type="warning"
+              :loading="step2Loading"
+              @click="retryStep2"
+              v-if="step2Failed && hasSupplementContent"
+            >
+              <el-icon v-if="!step2Loading"><Refresh /></el-icon>
+              {{ step2Loading ? '重试中...' : '重试' }}
+            </el-button>
+            <el-button
               type="success"
               @click="nextStep"
             >
@@ -284,6 +302,15 @@
             >
               <el-icon v-if="!step3Loading"><Magic /></el-icon>
               {{ step3Loading ? '生成中...' : '重新生成测试点' }}
+            </el-button>
+            <el-button
+              type="warning"
+              :loading="step3Loading"
+              @click="retryStep3"
+              v-if="step3Failed"
+            >
+              <el-icon v-if="!step3Loading"><Refresh /></el-icon>
+              {{ step3Loading ? '重试中...' : '重试' }}
             </el-button>
             <el-button
               type="success"
@@ -347,6 +374,15 @@
               上一步
             </el-button>
             <el-button
+              type="warning"
+              :loading="finalLoading"
+              @click="retryStep4"
+              v-if="step4Failed"
+            >
+              <el-icon v-if="!finalLoading"><Refresh /></el-icon>
+              {{ finalLoading ? '重试中...' : '重试' }}
+            </el-button>
+            <el-button
               type="primary"
               @click="resetAll"
             >
@@ -391,6 +427,7 @@ export default {
       step1ActiveFileNames: [],
       step1Result: '',
       step1Loading: false,
+      step1Failed: false,
       
       // 步骤2数据
       step2InputMode: 'text',
@@ -401,14 +438,17 @@ export default {
       step2ActiveFileNames: [],
       step2Result: '',
       step2Loading: false,
+      step2Failed: false,
       
       // 步骤3数据
       step3Result: '',
       step3Loading: false,
+      step3Failed: false,
       
       // 步骤4数据
       finalResult: '',
       finalLoading: false,
+      step4Failed: false,
       downloadUrl: ''
     }
   },
@@ -517,6 +557,7 @@ export default {
     // 步骤1：需求分析
     async analyzeRequirements() {
       this.step1Loading = true
+      this.step1Failed = false
       try {
         const formData = new FormData()
         
@@ -539,16 +580,18 @@ export default {
         
         if (response.data.success) {
           this.step1Result = response.data.analysis
+          this.step1Failed = false
           ElMessage.success('需求分析完成')
         } else {
           throw new Error(response.data.error || '需求分析失败')
         }
       } catch (error) {
         console.error('需求分析失败:', error)
-        ElMessage.error(error.message || '需求分析失败，请稍后重试')
-        
-        // 模拟分析结果
-        this.step1Result = `# 需求分析结果\n\n## 功能概述\n${this.step1TextInput || '基于上传文件的功能需求'}\n\n## 核心功能点\n1. 主要业务流程\n2. 输入输出要求\n3. 数据验证规则\n4. 异常处理机制\n\n## 非功能性需求\n1. 性能要求\n2. 安全要求\n3. 可用性要求\n4. 兼容性要求\n\n## 约束条件\n1. 技术约束\n2. 业务约束\n3. 时间约束\n\n*注意：由于网络问题，当前显示模拟分析结果。*`
+        this.step1Failed = true
+        // 显示服务器返回的具体错误信息
+        const errorMessage = error.response?.data?.error || error.message || '生成失败，请重新尝试生成'
+        ElMessage.error(errorMessage)
+        // 不再设置兜底数据，保持step1Result为空
       } finally {
         this.step1Loading = false
       }
@@ -557,6 +600,7 @@ export default {
     // 步骤2：需求补充
     async supplementRequirements() {
       this.step2Loading = true
+      this.step2Failed = false
       try {
         const formData = new FormData()
         
@@ -579,16 +623,18 @@ export default {
         
         if (response.data.success) {
           this.step2Result = response.data.updatedAnalysis
+          this.step2Failed = false
           ElMessage.success('需求补充完成')
         } else {
           throw new Error(response.data.error || '需求补充失败')
         }
       } catch (error) {
         console.error('需求补充失败:', error)
-        ElMessage.error(error.message || '需求补充失败，请稍后重试')
-        
-        // 模拟补充结果
-        this.step2Result = `# 需求补充分析\n\n## 补充内容\n${this.step2TextInput || '基于补充文档的额外需求'}\n\n## 更新的功能点\n1. 新增业务规则\n2. 特殊处理逻辑\n3. 额外的验证要求\n\n## 风险点识别\n1. 潜在的技术风险\n2. 业务逻辑复杂点\n3. 集成相关风险\n\n*注意：由于网络问题，当前显示模拟补充结果。*`
+        this.step2Failed = true
+        // 显示服务器返回的具体错误信息
+        const errorMessage = error.response?.data?.error || error.message || '生成失败，请重新尝试生成'
+        ElMessage.error(errorMessage)
+        // 不再设置兜底数据，保持step2Result为空
       } finally {
         this.step2Loading = false
       }
@@ -597,6 +643,7 @@ export default {
     // 步骤3：生成测试点
     async generateTestPoints() {
       this.step3Loading = true
+      this.step3Failed = false
       try {
         const allRequirements = this.step1Result + (this.step2Result ? '\n\n' + this.step2Result : '')
         
@@ -607,16 +654,18 @@ export default {
         
         if (response.data.success) {
           this.step3Result = response.data.testPoints
+          this.step3Failed = false
           ElMessage.success('测试点生成完成')
         } else {
           throw new Error(response.data.error || '测试点生成失败')
         }
       } catch (error) {
         console.error('测试点生成失败:', error)
-        ElMessage.error(error.message || '测试点生成失败，请稍后重试')
-        
-        // 模拟测试点
-        this.step3Result = '# 测试点列表\n\n## 功能测试点\n1. 正常流程测试\n   - 标准输入验证\n   - 正常业务流程\n   - 预期输出验证\n\n2. 异常流程测试\n   - 非法输入处理\n   - 错误场景处理\n   - 异常恢复机制\n\n3. 边界值测试\n   - 最大值测试\n   - 最小值测试\n   - 临界值测试\n\n## 非功能测试点\n1. 性能测试\n   - 响应时间\n   - 并发处理\n   - 资源占用\n\n2. 安全测试\n   - 输入验证\n   - 权限控制\n   - 数据保护\n\n3. 兼容性测试\n   - 浏览器兼容\n   - 设备兼容\n   - 版本兼容\n\n*注意：由于网络问题，当前显示模拟测试点。*'
+        this.step3Failed = true
+        // 显示服务器返回的具体错误信息
+        const errorMessage = error.response?.data?.error || error.message || '生成失败，请重新尝试生成'
+        ElMessage.error(errorMessage)
+        // 不再设置兜底数据，保持step3Result为空
       } finally {
         this.step3Loading = false
       }
@@ -625,6 +674,7 @@ export default {
     // 步骤4：生成最终测试用例
     async generateFinalTestCases() {
       this.finalLoading = true
+      this.step4Failed = false
       try {
         const allRequirements = this.step1Result + (this.step2Result ? '\n\n' + this.step2Result : '')
         
@@ -637,16 +687,18 @@ export default {
         if (response.data.success) {
           this.finalResult = response.data.content
           this.downloadUrl = `/api/download/${response.data.filename}`
+          this.step4Failed = false
           ElMessage.success('测试用例生成完成')
         } else {
           throw new Error(response.data.error || '测试用例生成失败')
         }
       } catch (error) {
         console.error('测试用例生成失败:', error)
-        ElMessage.error(error.message || '测试用例生成失败，请稍后重试')
-        
-        // 模拟最终结果
-        this.finalResult = '# 完整测试用例\n\n## 测试用例1：正常功能测试\n**用例编号**: TC-001\n**用例标题**: 正常业务流程验证\n**前置条件**: 系统正常运行，用户已登录\n**测试步骤**:\n1. 输入有效数据\n2. 执行业务操作\n3. 验证结果\n**预期结果**: 功能正常执行，返回预期结果\n**优先级**: 高\n\n## 测试用例2：异常处理测试\n**用例编号**: TC-002\n**用例标题**: 异常输入处理验证\n**前置条件**: 系统正常运行\n**测试步骤**:\n1. 输入异常数据\n2. 提交操作\n3. 观察系统反应\n**预期结果**: 系统正确处理异常，给出合适提示\n**优先级**: 中\n\n*注意：由于网络问题，当前显示模拟测试用例。*'
+        this.step4Failed = true
+        // 显示服务器返回的具体错误信息
+        const errorMessage = error.response?.data?.error || error.message || '生成失败，请重新尝试生成'
+        ElMessage.error(errorMessage)
+        // 不再设置兜底数据，保持finalResult为空
       } finally {
         this.finalLoading = false
       }
@@ -701,16 +753,37 @@ export default {
       this.step1FileContents = []
       this.step1ActiveFileNames = []
       this.step1Result = ''
+      this.step1Failed = false
       this.step2TextInput = ''
       this.step2FileList = []
       this.step2UploadedFiles = []
       this.step2FileContents = []
       this.step2ActiveFileNames = []
       this.step2Result = ''
+      this.step2Failed = false
       this.step3Result = ''
+      this.step3Failed = false
       this.finalResult = ''
+      this.step4Failed = false
       this.downloadUrl = ''
       ElMessage.success('已重置所有内容')
+    },
+
+    // 重试方法
+    retryStep1() {
+      this.analyzeRequirements()
+    },
+
+    retryStep2() {
+      this.supplementRequirements()
+    },
+
+    retryStep3() {
+      this.generateTestPoints()
+    },
+
+    retryStep4() {
+      this.generateFinalTestCases()
     }
   }
 }
