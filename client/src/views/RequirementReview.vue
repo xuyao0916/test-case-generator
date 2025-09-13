@@ -45,6 +45,20 @@
           </el-upload>
         </div>
 
+        <!-- 文本输入区域 -->
+        <div class="text-input-section">
+          <h3>或直接输入需求内容</h3>
+          <el-input
+            v-model="textInput"
+            type="textarea"
+            :rows="8"
+            placeholder="请在此输入需求内容，支持Markdown格式..."
+            class="text-input-textarea"
+            maxlength="10000"
+            show-word-limit
+          />
+        </div>
+
         <!-- 文件内容预览 -->
         <div v-if="fileContents.length > 0" class="file-contents-preview">
           <h3>文件内容预览</h3>
@@ -69,7 +83,7 @@
             size="large"
             :loading="reviewing"
             @click="startReview"
-            :disabled="uploadedFiles.length === 0"
+            :disabled="uploadedFiles.length === 0 && !textInput.trim()"
             class="review-btn"
           >
             <el-icon v-if="!reviewing"><Magic /></el-icon>
@@ -144,10 +158,11 @@ export default {
   data() {
     return {
       selectedApi: 'cybotstar',
-      fileList: [],
       uploadedFiles: [],
+      fileList: [],
       fileContents: [],
       activeFileNames: [],
+      textInput: '',
       reviewing: false,
       reviewResult: null,
       downloadUrl: ''
@@ -211,8 +226,8 @@ export default {
     },
 
     async startReview() {
-      if (this.uploadedFiles.length === 0) {
-        ElMessage.warning('请先上传需求文档')
+      if (this.uploadedFiles.length === 0 && !this.textInput.trim()) {
+        ElMessage.warning('请上传需求文档或输入需求内容')
         return
       }
 
@@ -223,6 +238,11 @@ export default {
         this.uploadedFiles.forEach(file => {
           formData.append('files', file)
         })
+        
+        // 添加文本输入内容
+        if (this.textInput.trim()) {
+          formData.append('content', this.textInput.trim())
+        }
         
         formData.append('apiProvider', this.selectedApi)
         formData.append('reviewType', 'requirement')
@@ -242,15 +262,13 @@ export default {
         }
       } catch (error) {
         console.error('评审失败:', error)
-        ElMessage.error(error.response?.data?.error || '需求评审失败，请稍后重试')
+        // 显示具体的错误信息，不提供兜底内容
+        const errorMessage = error.response?.data?.error || error.message || '需求评审失败，请稍后重试'
+        ElMessage.error(errorMessage)
         
-        // 模拟评审结果
-        this.reviewResult = {
-          score: 85,
-          issueCount: 3,
-          content: '# 需求评审报告\n\n## 整体评价\n该需求文档整体结构清晰，内容相对完整，但在某些方面还有改进空间。\n\n## 详细分析\n\n### 优点\n1. **需求描述清晰**: 功能需求描述较为明确\n2. **业务流程完整**: 主要业务流程覆盖全面\n3. **界面设计合理**: UI/UX设计考虑周到\n\n### 问题点\n1. **非功能需求不足**: 缺少性能、安全性等非功能需求\n2. **验收标准模糊**: 部分功能缺少明确的验收标准\n3. **异常处理不完整**: 异常场景处理描述不够详细',
-          suggestions: '## 改进建议\n\n1. **补充非功能需求**\n   - 添加性能要求（响应时间、并发用户数等）\n   - 明确安全性要求\n   - 定义可用性标准\n\n2. **完善验收标准**\n   - 为每个功能点定义明确的验收标准\n   - 添加测试用例示例\n\n3. **增强异常处理**\n   - 详细描述各种异常场景\n   - 定义错误处理策略'
-        }
+        // 清空之前的结果
+        this.reviewResult = null
+        this.downloadUrl = ''
       } finally {
         this.reviewing = false
       }
@@ -376,14 +394,35 @@ export default {
   gap: 20px;
 }
 
-.upload-section {
-  margin-bottom: 30px;
+.text-input-section {
+  margin: 20px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
 }
 
-.upload-section h3 {
+.text-input-section h3 {
   margin: 0 0 15px 0;
   color: #2c3e50;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.text-input-textarea {
+  width: 100%;
+}
+
+.text-input-textarea .el-textarea__inner {
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  line-height: 1.5;
+}
+
+.text-input-textarea .el-textarea__inner:focus {
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
 }
 
 .upload-demo {

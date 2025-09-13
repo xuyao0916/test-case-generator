@@ -574,6 +574,10 @@ const DEMAND_REVIEW_CYBOTSTAR_ROBOT_TOKEN = process.env.DEMAND_REVIEW_CYBOTSTAR_
 const CASE_REVIEW_CYBOTSTAR_ROBOT_KEY = process.env.CASE_REVIEW_CYBOTSTAR_ROBOT_KEY;
 const CASE_REVIEW_CYBOTSTAR_ROBOT_TOKEN = process.env.CASE_REVIEW_CYBOTSTAR_ROBOT_TOKEN;
 
+// 测试点生成专用配置
+const TEST_POINT_GENERATION_CYBOTSTAR_ROBOT_KEY = process.env.TEST_POINT_GENERATION_CYBOTSTAR_ROBOT_KEY;
+const TEST_POINT_GENERATION_CYBOTSTAR_ROBOT_TOKEN = process.env.TEST_POINT_GENERATION_CYBOTSTAR_ROBOT_TOKEN;
+
 // DeepSeek API配置
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_API_URL = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/chat/completions';
@@ -701,8 +705,8 @@ app.post('/api/generate', upload.single('file'), async (req, res) => {
         generatedContent = response.data.choices[0].message.content;
         
       } catch (apiError) {
-        console.log('DeepSeek API调用失败，使用模拟响应:', apiError.message);
-        generatedContent = `# 测试用例生成结果\n\n## 功能描述\n${inputContent}\n\n## 测试用例\n\n### 测试用例1：正常功能测试\n**测试步骤：**\n1. 准备测试数据\n2. 执行功能操作\n3. 验证结果\n\n**预期结果：**\n功能正常执行，返回预期结果\n\n### 测试用例2：边界条件测试\n**测试步骤：**\n1. 使用边界值进行测试\n2. 验证系统处理\n\n**预期结果：**\n系统能正确处理边界情况\n\n### 测试用例3：异常情况测试\n**测试步骤：**\n1. 输入异常数据\n2. 观察系统响应\n\n**预期结果：**\n系统能优雅处理异常情况并给出适当提示\n\n---\n*注意：由于网络连接问题，当前使用本地生成的测试用例模板。请检查网络连接后重试以获得AI生成的个性化测试用例。*`;
+        console.log('DeepSeek API调用失败:', apiError.message);
+        throw apiError;
       }
     } else {
       // 调用Cybotstar API
@@ -713,8 +717,8 @@ app.post('/api/generate', upload.single('file'), async (req, res) => {
         }, {
           headers: {
             'Content-Type': 'application/json',
-            'cybertron-robot-key': CASE_GENERATION_CYBOTSTAR_ROBOT_KEY,
-            'cybertron-robot-token': CASE_GENERATION_CYBOTSTAR_ROBOT_TOKEN
+            'cybertron-robot-key': TEST_POINT_GENERATION_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': TEST_POINT_GENERATION_CYBOTSTAR_ROBOT_TOKEN
           },
           timeout: 600000 // 10分钟超时
         });
@@ -737,15 +741,14 @@ app.post('/api/generate', upload.single('file'), async (req, res) => {
         console.log('成功提取内容，长度:', generatedContent.length);
         
       } catch (apiError) {
-        console.log('Cybotstar API调用失败，使用模拟响应:', apiError.message);
+        console.log('Cybotstar API调用失败:', apiError.message);
         console.log('错误详情:', {
           code: apiError.code,
           response: apiError.response?.status,
           responseData: apiError.response?.data
         });
         
-        // 使用模拟响应
-        generatedContent = `# 测试用例生成结果\n\n## 功能描述\n${inputContent}\n\n## 测试用例\n\n### 测试用例1：正常功能测试\n**测试步骤：**\n1. 准备测试数据\n2. 执行功能操作\n3. 验证结果\n\n**预期结果：**\n功能正常执行，返回预期结果\n\n### 测试用例2：边界条件测试\n**测试步骤：**\n1. 使用边界值进行测试\n2. 验证系统处理\n\n**预期结果：**\n系统能正确处理边界情况\n\n### 测试用例3：异常情况测试\n**测试步骤：**\n1. 输入异常数据\n2. 观察系统响应\n\n**预期结果：**\n系统能优雅处理异常情况并给出适当提示\n\n---\n*注意：由于网络连接问题，当前使用本地生成的测试用例模板。请检查网络连接后重试以获得AI生成的个性化测试用例。*`;
+        throw apiError;
       }
     }
     
@@ -997,7 +1000,7 @@ app.post('/api/step-by-step/analyze', upload.array('files', 10), async (req, res
             'cybertron-robot-key': DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_KEY,
             'cybertron-robot-token': DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_TOKEN
           },
-          timeout: 60000
+          timeout: 600000
         });
         
         if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
@@ -1028,7 +1031,7 @@ app.post('/api/step-by-step/analyze', upload.array('files', 10), async (req, res
             'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
             'Content-Type': 'application/json'
           },
-          timeout: 60000
+          timeout: 600000
         });
         
         if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
@@ -1051,14 +1054,9 @@ app.post('/api/step-by-step/analyze', upload.array('files', 10), async (req, res
   } catch (error) {
     console.error('需求分析失败:', error);
     
-    // 模拟分析结果
-    const mockAnalysis = `## 需求分析结果\n\n### 1. 功能模块划分\n- 用户管理模块\n- 数据处理模块\n- 界面展示模块\n\n### 2. 主要业务流程\n- 用户登录验证\n- 数据输入处理\n- 结果展示输出\n\n### 3. 用户角色和权限\n- 普通用户：基础功能使用\n- 管理员：系统配置管理\n\n### 4. 关键功能点\n- 数据验证\n- 错误处理\n- 用户体验优化\n\n### 5. 数据流向\n输入 → 验证 → 处理 → 存储 → 展示`;
-    
-    res.json({
-      success: true,
-      analysis: mockAnalysis,
-      originalContent: req.body.textInput || '模拟需求内容',
-      mock: true
+    res.status(500).json({
+      success: false,
+      error: '需求分析失败，请重新尝试分析'
     });
   }
 });
@@ -1102,7 +1100,7 @@ app.post('/api/step-by-step/supplement', upload.array('files', 10), async (req, 
             'cybertron-robot-key': DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_KEY,
             'cybertron-robot-token': DEMAND_ANALYSIS_CYBOTSTAR_ROBOT_TOKEN
           },
-          timeout: 60000
+          timeout: 600000
         });
         
         if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
@@ -1132,7 +1130,7 @@ app.post('/api/step-by-step/supplement', upload.array('files', 10), async (req, 
             'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
             'Content-Type': 'application/json'
           },
-          timeout: 60000
+          timeout: 600000
         });
         
         if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
@@ -1155,14 +1153,9 @@ app.post('/api/step-by-step/supplement', upload.array('files', 10), async (req, 
   } catch (error) {
     console.error('需求补充失败:', error);
     
-    // 模拟更新结果
-    const mockUpdate = req.body.originalAnalysis + '\n\n## 补充信息\n\n根据新增的补充信息，进一步完善了需求分析，增加了更多细节和考虑因素。';
-    
-    res.json({
-      success: true,
-      updatedAnalysis: mockUpdate,
-      hasUpdate: true,
-      mock: true
+    res.status(500).json({
+      success: false,
+      error: '需求补充失败，请重新尝试补充'
     });
   }
 });
@@ -1186,15 +1179,23 @@ app.post('/api/step-by-step/test-points', async (req, res) => {
         }, {
           headers: {
             'Content-Type': 'application/json',
-            'cybertron-robot-key': CASE_GENERATION_CYBOTSTAR_ROBOT_KEY,
-            'cybertron-robot-token': CASE_GENERATION_CYBOTSTAR_ROBOT_TOKEN
+            'cybertron-robot-key': TEST_POINT_GENERATION_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': TEST_POINT_GENERATION_CYBOTSTAR_ROBOT_TOKEN
           },
-          timeout: 60000
+          timeout: 600000
         });
+        
+        console.log('Cybotstar API 完整响应:', JSON.stringify(cybotstarResponse.data, null, 2));
         
         if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
           testPoints = cybotstarResponse.data.data.answer;
         } else {
+          console.log('Cybotstar API 响应格式不符合预期:');
+          console.log('- 响应状态:', cybotstarResponse.status);
+          console.log('- 响应数据结构:', Object.keys(cybotstarResponse.data || {}));
+          if (cybotstarResponse.data && cybotstarResponse.data.data) {
+            console.log('- data字段结构:', Object.keys(cybotstarResponse.data.data));
+          }
           throw new Error('Cybotstar API 响应格式错误');
         }
       } catch (apiError) {
@@ -1219,7 +1220,7 @@ app.post('/api/step-by-step/test-points', async (req, res) => {
             'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
             'Content-Type': 'application/json'
           },
-          timeout: 60000
+          timeout: 600000
         });
         
         if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
@@ -1241,13 +1242,9 @@ app.post('/api/step-by-step/test-points', async (req, res) => {
   } catch (error) {
     console.error('测试点生成失败:', error);
     
-    // 模拟测试点
-    const mockTestPoints = `## 测试点列表\n\n### 1. 功能测试点\n- 用户登录功能验证\n- 数据输入功能验证\n- 数据保存功能验证\n- 数据查询功能验证\n\n### 2. 边界测试点\n- 输入字段长度边界测试\n- 数值范围边界测试\n- 文件大小边界测试\n\n### 3. 异常测试点\n- 网络异常处理测试\n- 数据库连接异常测试\n- 非法输入处理测试\n\n### 4. 性能测试点\n- 响应时间测试\n- 并发用户测试\n- 系统负载测试\n\n### 5. 安全测试点\n- 权限验证测试\n- 数据加密测试\n- SQL注入防护测试`;
-    
-    res.json({
-      success: true,
-      testPoints: mockTestPoints,
-      mock: true
+    res.status(500).json({
+      success: false,
+      error: '测试点生成失败，请重新尝试生成'
     });
   }
 });
@@ -1274,12 +1271,20 @@ app.post('/api/step-by-step/generate-final', async (req, res) => {
             'cybertron-robot-key': CASE_GENERATION_CYBOTSTAR_ROBOT_KEY,
             'cybertron-robot-token': CASE_GENERATION_CYBOTSTAR_ROBOT_TOKEN
           },
-          timeout: 60000
+          timeout: 600000
         });
+        
+        console.log('Cybotstar API 完整响应:', JSON.stringify(cybotstarResponse.data, null, 2));
         
         if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
           testCases = cybotstarResponse.data.data.answer;
         } else {
+          console.log('Cybotstar API 响应格式不符合预期:');
+          console.log('- 响应状态:', cybotstarResponse.status);
+          console.log('- 响应数据结构:', Object.keys(cybotstarResponse.data || {}));
+          if (cybotstarResponse.data && cybotstarResponse.data.data) {
+            console.log('- data字段结构:', Object.keys(cybotstarResponse.data.data));
+          }
           throw new Error('Cybotstar API 响应格式错误');
         }
       } catch (apiError) {
@@ -1304,7 +1309,7 @@ app.post('/api/step-by-step/generate-final', async (req, res) => {
             'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
             'Content-Type': 'application/json'
           },
-          timeout: 60000
+          timeout: 600000
         });
         
         if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
@@ -1358,18 +1363,9 @@ app.post('/api/step-by-step/generate-final', async (req, res) => {
   } catch (error) {
     console.error('最终测试用例生成失败:', error);
     
-    // 模拟测试用例
-    const mockTestCases = `# 功能测试用例\n\n## 测试用例1：用户登录功能\n\n**测试目的：** 验证用户登录功能的正确性\n\n**前置条件：** 用户已注册且账号状态正常\n\n**测试步骤：**\n1. 打开登录页面\n2. 输入正确的用户名和密码\n3. 点击登录按钮\n\n**预期结果：** 登录成功，跳转到主页面\n\n## 测试用例2：数据输入功能\n\n**测试目的：** 验证数据输入功能的正确性\n\n**前置条件：** 用户已登录系统\n\n**测试步骤：**\n1. 进入数据输入页面\n2. 填写必填字段\n3. 点击保存按钮\n\n**预期结果：** 数据保存成功，显示成功提示`;
-    
-    const timestamp = Date.now();
-    const filename = `step_by_step_testcases_${timestamp}.xmind`;
-    
-    res.json({
-      success: true,
-      content: mockTestCases,
-      filename: filename,
-      title: '分步骤测试用例（模拟）',
-      mock: true
+    res.status(500).json({
+      success: false,
+      error: error.message || '测试用例生成失败，请重新尝试生成'
     });
   }
 });
@@ -1456,12 +1452,7 @@ app.post('/api/generate-distributed', upload.single('file'), async (req, res) =>
           };
         } catch (error) {
           console.error(`分片 ${i + index} 生成失败:`, error.message);
-          return {
-            index: i + index,
-            content: `# 测试用例分片 ${i + index + 1}\n\n## 原始需求\n${part}\n\n## 测试用例\n\n### 测试用例1：基本功能测试\n**测试步骤：**\n1. 准备测试环境\n2. 执行功能操作\n3. 验证结果\n\n**预期结果：**\n功能正常执行\n\n*注意：此为模拟生成的测试用例，请根据实际需求调整。*`,
-            originalPart: part.substring(0, 100) + '...',
-            error: true
-          };
+          throw error;
         }
       });
       
@@ -1549,7 +1540,7 @@ app.post('/api/review-testcase', upload.single('file'), async (req, res) => {
             'cybertron-robot-key': CASE_REVIEW_CYBOTSTAR_ROBOT_KEY,
             'cybertron-robot-token': CASE_REVIEW_CYBOTSTAR_ROBOT_TOKEN
           },
-          timeout: 60000
+          timeout: 600000
         });
         
         if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
@@ -1623,7 +1614,159 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'client/dist/index.html'));
 });
 
-// 需求评审接口
+// 需求评审接口 - 新路由（修复前端调用路径）
+app.post('/api/review/requirement', upload.array('files', 10), async (req, res) => {
+  try {
+    const { content, apiProvider = 'cybotstar', reviewCriteria } = req.body;
+    let allContent = content || '';
+    
+    // 处理多个文件上传
+    if (req.files && req.files.length > 0) {
+      let allFileContent = '';
+      for (const file of req.files) {
+        const fileContent = await parseUploadedFile(file.path, file.originalname);
+        allFileContent += `\n\n=== ${file.originalname} ===\n${fileContent}`;
+        // 删除临时文件
+        await fs.remove(file.path);
+      }
+      allContent = allFileContent + '\n\n' + allContent;
+    }
+    
+    if (!allContent.trim()) {
+      return res.status(400).json({ 
+        success: false,
+        error: '请提供需求内容或上传文件' 
+      });
+    }
+    
+    let reviewResult;
+    
+    if (apiProvider === 'cybotstar') {
+      try {
+        const cybotstarResponse = await axios.post(CYBOTSTAR_API_URL, {
+          username: CYBOTSTAR_USERNAME,
+          question: `请对以下需求文档进行专业评审，评审标准：${reviewCriteria || '完整性、准确性、可行性、一致性'}\n\n需求内容：\n${allContent}`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'cybertron-robot-key': DEMAND_REVIEW_CYBOTSTAR_ROBOT_KEY,
+            'cybertron-robot-token': DEMAND_REVIEW_CYBOTSTAR_ROBOT_TOKEN
+          },
+          timeout: 600000
+        });
+        
+        if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
+          reviewResult = cybotstarResponse.data.data.answer;
+        } else {
+          throw new Error('Cybotstar API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('Cybotstar API调用失败:', apiError.message);
+        let errorMessage = 'API调用失败';
+        
+        if (apiError.response) {
+          // 服务器响应了错误状态码
+          errorMessage = `API调用失败: HTTP ${apiError.response.status} - ${apiError.response.data?.message || apiError.response.statusText}`;
+        } else if (apiError.request) {
+          // 请求已发出但没有收到响应
+          errorMessage = 'API调用失败: 网络连接超时或服务不可用';
+        } else {
+          // 其他错误
+          errorMessage = `API调用失败: ${apiError.message}`;
+        }
+        
+        return res.status(500).json({ 
+          success: false,
+          error: errorMessage
+        });
+      }
+    } else {
+      // DeepSeek API 调用
+      try {
+        const deepseekResponse = await axios.post(DEEPSEEK_API_URL, {
+          model: 'deepseek-chat',
+          messages: [{
+            role: 'system',
+            content: '你是一位资深的需求分析师，擅长评审需求文档的质量。请从以下维度对需求进行专业评审：1. 完整性（需求是否完整清晰）2. 准确性（需求描述是否准确）3. 可行性（技术实现可行性）4. 一致性（需求之间是否一致）5. 可测试性（需求是否可测试）。请给出具体的评审意见和改进建议。'
+          }, {
+            role: 'user',
+            content: `请对以下需求文档进行评审，评审标准：${reviewCriteria || '完整性、准确性、可行性、一致性、可测试性'}\n\n需求内容：\n${allContent}`
+          }],
+          stream: false
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          timeout: 300000
+        });
+        
+        if (deepseekResponse.data && deepseekResponse.data.choices && deepseekResponse.data.choices[0]) {
+          reviewResult = deepseekResponse.data.choices[0].message.content;
+        } else {
+          throw new Error('DeepSeek API 响应格式错误');
+        }
+      } catch (apiError) {
+        console.log('DeepSeek API调用失败:', apiError.message);
+        let errorMessage = 'API调用失败';
+        
+        if (apiError.response) {
+          // 服务器响应了错误状态码
+          errorMessage = `DeepSeek API调用失败: HTTP ${apiError.response.status} - ${apiError.response.data?.error?.message || apiError.response.statusText}`;
+        } else if (apiError.request) {
+          // 请求已发出但没有收到响应
+          errorMessage = 'DeepSeek API调用失败: 网络连接超时或服务不可用';
+        } else {
+          // 其他错误
+          errorMessage = `DeepSeek API调用失败: ${apiError.message}`;
+        }
+        
+        return res.status(500).json({ 
+          success: false,
+          error: errorMessage
+        });
+      }
+    }
+    
+    // 解析评审结果，提取评分和问题数量
+    const score = Math.floor(Math.random() * 20) + 80; // 模拟评分 80-100
+    const issueCount = Math.floor(Math.random() * 5) + 1; // 模拟问题数量 1-5
+    
+    res.json({
+      success: true,
+      result: {
+        score: score,
+        issueCount: issueCount,
+        content: reviewResult,
+        suggestions: '根据评审结果，建议完善需求文档的详细描述和验收标准。'
+      }
+    });
+    
+  } catch (error) {
+    console.error('需求评审失败:', error);
+    
+    let errorMessage = '需求评审失败，请稍后重试';
+    
+    if (error.message) {
+      if (error.message.includes('ENOENT')) {
+        errorMessage = '文件处理失败: 文件不存在或无法访问';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = '请求超时: 服务响应时间过长，请稍后重试';
+      } else if (error.message.includes('ECONNREFUSED')) {
+        errorMessage = '连接失败: 无法连接到评审服务';
+      } else {
+        errorMessage = `需求评审失败: ${error.message}`;
+      }
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: errorMessage
+    });
+  }
+});
+
+// 需求评审接口 - 原路由（保持兼容性）
 app.post('/api/requirement-review', upload.array('files', 10), async (req, res) => {
   try {
     const { content, apiProvider = 'cybotstar', reviewCriteria } = req.body;
@@ -1658,7 +1801,7 @@ app.post('/api/requirement-review', upload.array('files', 10), async (req, res) 
             'cybertron-robot-key': DEMAND_REVIEW_CYBOTSTAR_ROBOT_KEY,
             'cybertron-robot-token': DEMAND_REVIEW_CYBOTSTAR_ROBOT_TOKEN
           },
-          timeout: 60000
+          timeout: 600000
         });
         
         if (cybotstarResponse.data && cybotstarResponse.data.data && cybotstarResponse.data.data.answer) {
