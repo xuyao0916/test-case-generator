@@ -73,6 +73,10 @@
                 <el-icon><Position /></el-icon>
                 <span>接口测试</span>
               </el-menu-item>
+              <el-menu-item index="/api/wss">
+                <el-icon><Connection /></el-icon>
+                <span>wss接口测试</span>
+              </el-menu-item>
               <el-menu-item index="/api/generate">
                 <el-icon><Magic /></el-icon>
                 <span>用例生成</span>

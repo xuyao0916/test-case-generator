@@ -37,6 +37,11 @@ const routes = [
     component: () => import('../views/ApiTest.vue')
   },
   {
+    path: '/api/wss',
+    name: 'WssTest',
+    component: () => import('../views/WssTest.vue')
+  },
+  {
     path: '/api/generate',
     name: 'ApiGenerate',
     component: () => import('../views/ApiGenerate.vue')
