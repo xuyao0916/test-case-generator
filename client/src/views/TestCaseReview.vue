@@ -99,7 +99,7 @@
             :on-change="handleTestCaseFileChange"
             :on-remove="handleTestCaseFileRemove"
             :auto-upload="false"
-            accept=".txt,.doc,.docx,.pdf,.xls,.xlsx"
+            accept=".txt,.doc,.docx,.pdf,.xls,.xlsx,.xmind"
             :limit="10"
           >
             <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
@@ -108,7 +108,7 @@
             </div>
             <template #tip>
               <div class="el-upload__tip">
-                支持 txt/doc/docx/pdf/xls/xlsx 格式文件，最多上传10个文件，单个文件大小不超过10MB
+                支持 txt/doc/docx/pdf/xls/xlsx/xmind 格式文件，最多上传10个文件，单个文件大小不超过10MB
               </div>
             </template>
           </el-upload>

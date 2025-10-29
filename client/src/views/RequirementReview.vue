@@ -14,7 +14,7 @@
           <h3>选择AI模型</h3>
           <el-radio-group v-model="selectedApi" class="api-options">
             <el-radio label="cybotstar">CybotStar</el-radio>
-            <el-radio label="openai">OpenAI</el-radio>
+            <el-radio label="deepseek">deepseek</el-radio>
           </el-radio-group>
         </div>
 
@@ -60,7 +60,7 @@
         </div>
 
         <!-- 文件内容预览 -->
-        <div v-if="fileContents.length > 0" class="file-contents-preview">
+        <!-- <div v-if="fileContents.length > 0" class="file-contents-preview">
           <h3>文件内容预览</h3>
           <el-collapse v-model="activeFileNames">
             <el-collapse-item v-for="(fileContent, index) in fileContents" :key="index" :title="fileContent.fileName" :name="fileContent.fileName">
@@ -74,7 +74,7 @@
               />
             </el-collapse-item>
           </el-collapse>
-        </div>
+        </div> -->
 
         <!-- 操作按钮 -->
         <div class="action-section">
