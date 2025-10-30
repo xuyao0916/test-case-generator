@@ -4,14 +4,27 @@
       <template #header>
         <div class="card-header">
           <span>WSS接口测试</span>
-          <el-button 
-            type="primary" 
-            :loading="batchTesting" 
-            @click="testAllInterfaces"
-            :disabled="wssConfigs.length === 0"
-          >
-            {{ batchTesting ? '测试中...' : '测试所有接口' }}
-          </el-button>
+          <div class="batch-controls">
+            <div class="rounds-config">
+              <span>测试轮次:</span>
+              <el-input-number 
+                v-model="batchTestRounds" 
+                :min="1" 
+                :max="10"
+                size="small"
+                style="width: 80px; margin: 0 10px;"
+              />
+              <span style="color: #999; font-size: 12px;">轮</span>
+            </div>
+            <el-button 
+              type="primary" 
+              :loading="batchTesting" 
+              @click="testAllInterfaces"
+              :disabled="wssConfigs.length === 0"
+            >
+              {{ batchTesting ? '测试中...' : '测试所有接口' }}
+            </el-button>
+          </div>
         </div>
       </template>
       
@@ -147,10 +160,40 @@ export default {
   name: 'WssTest',
   data() {
     return {
+      // 常识问题库
+      questionBank: [
+        '今天天气怎么样？',
+        '请介绍一下中国的首都',
+        '什么是人工智能？',
+        '请推荐几本好书',
+        '如何保持健康的生活方式？',
+        '请解释一下什么是区块链',
+        '中国有哪些著名的旅游景点？',
+        '请介绍一下春节的习俗',
+        '什么是可持续发展？',
+        '请说说你对教育的看法',
+        '如何学习一门新的编程语言？',
+        '请介绍一下太阳系的行星',
+        '什么是云计算？',
+        '请推荐一些健康的食物',
+        '如何提高工作效率？',
+        '请解释一下什么是5G技术',
+        '中国的传统文化有哪些特色？',
+        '如何保护环境？',
+        '请介绍一下奥运会的历史',
+        '什么是机器学习？',
+        '如何培养良好的阅读习惯？',
+        '请说说互联网对生活的影响',
+        '如何做好时间管理？',
+        '请介绍一下中国的四大发明',
+        '什么是大数据？'
+      ],
+      
       // 批量测试状态
       batchTesting: false,
       batchProgress: 0,
       batchTestResults: [],
+      batchTestRounds: 3, // 全局批量测试轮次配置
       
       // WSS接口配置列表
       wssConfigs: [
@@ -208,6 +251,25 @@ export default {
           websocket: null,
           messages: []
           
+        },
+        {
+          name: '轻量plus',
+          url: 'wss://www.cybotstar.cn/openapi/ws/lightweight-plus/dialog/',
+          testParams: {
+            'cybertron-robot-token': 'MTc1MjE1NTEzMjU1Nwp0ejl3K1ZYY2F2MkZrUkVHTGsyRGZhZUltOEU9',
+            'cybertron-robot-key': 's%2B6v1Kd9jdVoa79rHsgOLKTy0qE%3D',
+            username: 'yao.xu@brgroup.com',
+            question: '你帮我写一个10句诗词'
+          },
+          
+          // 运行时状态
+          connected: false,
+          connecting: false,
+          testing: false,
+          status: '未连接',
+          websocket: null,
+          messages: []
+          
         }
       ],
       
@@ -243,13 +305,36 @@ export default {
               await this.sleep(1000) // 等待连接稳定
             }
             
-            // 执行测试
+            // 执行多轮测试
             if (config.connected) {
-              await this.testSingleInterface(i)
+              const rounds = this.batchTestRounds || 1 // 使用全局轮次配置
+              let successCount = 0
+              const originalQuestion = config.testParams.question // 保存原始问题
+              
+              for (let round = 1; round <= rounds; round++) {
+                try {
+                  // 为每轮对话生成随机问题
+                  config.testParams.question = this.getRandomQuestion()
+                  
+                  await this.testSingleInterface(i)
+                  successCount++
+                  
+                  // 轮次间隔
+                  if (round < rounds) {
+                    await this.sleep(1000)
+                  }
+                } catch (roundError) {
+                  console.error(`第${round}轮测试失败:`, roundError)
+                }
+              }
+              
+              // 恢复原始问题
+              config.testParams.question = originalQuestion
+              
               this.batchTestResults.push({ 
                 name: config.name, 
-                success: true, 
-                message: '测试完成' 
+                success: successCount > 0, 
+                message: `完成${successCount}/${rounds}轮对话测试` 
               })
             } else {
               this.batchTestResults.push({ 
@@ -364,7 +449,10 @@ export default {
               type: 'system',
               content: `连接关闭 (代码: ${event.code})`,
               timestamp: new Date(),
-              testResult: { success: event.code === 1000, note: event.code === 1000 ? '正常关闭连接' : '异常关闭连接' }
+              testResult: { 
+                success: event.code === 1000 || event.code === 1005, 
+                note: (event.code === 1000 || event.code === 1005) ? '正常关闭连接' : '异常关闭连接' 
+              }
             })
           }
         })
@@ -488,7 +576,7 @@ export default {
         }
       }
 
-      this.wssConfigs.push({
+      const newConfig = {
         name: this.newInterfaceForm.name,
         url: this.newInterfaceForm.url,
         testParams: testParams,
@@ -498,7 +586,9 @@ export default {
         status: '未连接',
         websocket: null,
         messages: []
-      })
+      }
+
+      this.wssConfigs.push(newConfig)
 
       ElMessage.success('接口添加成功')
       this.resetForm()
@@ -516,6 +606,12 @@ export default {
     // 工具方法
     sleep(ms) {
       return new Promise(resolve => setTimeout(resolve, ms))
+    },
+
+    // 随机获取问题
+    getRandomQuestion() {
+      const randomIndex = Math.floor(Math.random() * this.questionBank.length)
+      return this.questionBank[randomIndex]
     },
 
     getStatusType(status) {
@@ -604,6 +700,24 @@ export default {
 
 .interface-card.connected {
   border-color: #67c23a;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.batch-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.rounds-config {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
 }
 
 .interface-header {
