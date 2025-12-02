@@ -148,7 +148,6 @@ export default {
     const showViewDialog = ref(false)
     const currentApi = ref(null)
     
-    // 示例API数据
     const apis = ref([
       {
         name: '生成测试用例',
@@ -232,7 +231,6 @@ export default {
       
       apis.value.push({ ...newApi })
       
-      // 重置表单
       Object.assign(newApi, {
         name: '',
         method: 'GET',
@@ -252,7 +250,6 @@ export default {
     }
     
     const testApi = (api) => {
-      // 跳转到接口测试页面，并预填充数据
       router.push({
         path: '/api/test',
         query: {
@@ -270,7 +267,6 @@ export default {
         apis.value.splice(index, 1)
         ElMessage.success('删除成功')
       } catch {
-        // 用户取消删除
       }
     }
     

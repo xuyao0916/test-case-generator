@@ -647,6 +647,242 @@ console.log('API配置:', {
   deepseekKeyExists: !!DEEPSEEK_API_KEY
 });
 
+function parseCurlToRequest(curlText) {
+  if (!curlText || typeof curlText !== 'string') {
+    throw new Error('未提供有效的cURL命令');
+  }
+  const text = curlText.trim();
+  if (!text.startsWith('curl')) {
+    throw new Error('cURL命令必须以 curl 开头');
+  }
+
+  const tokens = [];
+  let current = '';
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === "'" && !inDouble) { inSingle = !inSingle; continue; }
+    if (ch === '"' && !inSingle) { inDouble = !inDouble; continue; }
+    if (!inSingle && !inDouble && /\s/.test(ch)) {
+      if (current.length) { tokens.push(current); current = ''; }
+    } else {
+      current += ch;
+    }
+  }
+  if (current.length) tokens.push(current);
+
+  // 移除首个 curl
+  if (tokens[0] === 'curl') tokens.shift();
+
+  let method = 'GET';
+  let url = '';
+  const headers = {};
+  let body = null;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if ((t === '-X' || t === '--request') && tokens[i+1]) {
+      method = tokens[i+1].toUpperCase();
+      i++;
+      continue;
+    }
+    if ((t === '-H' || t === '--header') && tokens[i+1]) {
+      const hv = tokens[i+1];
+      const sepIndex = hv.indexOf(':');
+      if (sepIndex > -1) {
+        const key = hv.slice(0, sepIndex).trim();
+        const val = hv.slice(sepIndex + 1).trim();
+        headers[key] = val;
+      }
+      i++;
+      continue;
+    }
+    if ((t === '-d' || t === '--data' || t === '--data-raw' || t === '--data-binary') && tokens[i+1]) {
+      const dv = tokens[i+1];
+      // 尝试解析为JSON，否则当作字符串
+      try {
+        body = JSON.parse(dv);
+      } catch {
+        // 尝试解析为 key=value& 格式
+        if (dv.includes('=') && dv.includes('&')) {
+          const obj = {};
+          dv.split('&').forEach(pair => {
+            const [k, v] = pair.split('=');
+            obj[decodeURIComponent(k)] = decodeURIComponent(v || '');
+          });
+          body = obj;
+        } else {
+          body = dv;
+        }
+      }
+      i++;
+      continue;
+    }
+    if (!t.startsWith('-') && !url) {
+      url = t;
+    }
+  }
+
+  // 如果URL仍为空，尝试最后一个非选项token
+  if (!url) {
+    const lastNonOption = [...tokens].reverse().find(x => !x.startsWith('-'));
+    if (lastNonOption) url = lastNonOption;
+  }
+
+  return { method, url, headers, body };
+}
+
+function generateCombinationCases(baseReq) {
+  const cases = [];
+  const { method, url, headers, body } = baseReq;
+
+  const baseCase = {
+    name: '正常请求',
+    request: { method, url, headers: { ...headers }, data: body ?? null },
+    expectStatus: 200,
+    negative: false
+  };
+  cases.push(baseCase);
+
+  const urlObj = (() => { try { return new URL(url); } catch { return null; } })();
+  const queryParams = {};
+  if (urlObj) {
+    urlObj.searchParams.forEach((v, k) => { queryParams[k] = v; });
+  }
+
+  const bodyObj = typeof body === 'object' && body !== null ? body : {};
+
+  const keys = [...Object.keys(queryParams), ...Object.keys(bodyObj)];
+  keys.forEach(k => {
+    // 缺失参数
+    const c1 = {
+      name: `缺失参数 ${k}`,
+      request: { method, url, headers: { ...headers }, data: { ...bodyObj } },
+      expectStatus: 400,
+      negative: true
+    };
+    if (k in c1.request.data) delete c1.request.data[k];
+    cases.push(c1);
+
+    // 空值
+    const c2 = {
+      name: `空值参数 ${k}`,
+      request: { method, url, headers: { ...headers }, data: { ...bodyObj, [k]: '' } },
+      expectStatus: 400,
+      negative: true
+    };
+    cases.push(c2);
+
+    // 类型错误
+    const v = bodyObj[k];
+    let wrongVal = Array.isArray(v) ? {} : (typeof v === 'number' ? 'abc' : (typeof v === 'string' ? 123 : []));
+    const c3 = {
+      name: `类型错误 ${k}`,
+      request: { method, url, headers: { ...headers }, data: { ...bodyObj, [k]: wrongVal } },
+      expectStatus: 400,
+      negative: true
+    };
+    cases.push(c3);
+
+    // 边界值（长字符串）
+    const c4 = {
+      name: `边界值长度 ${k}`,
+      request: { method, url, headers: { ...headers }, data: { ...bodyObj, [k]: 'x'.repeat(256) } },
+      expectStatus: 400,
+      negative: true
+    };
+    cases.push(c4);
+  });
+
+  // 头部缺失 Content-Type
+  if (headers && headers['Content-Type']) {
+    cases.push({
+      name: '缺失Content-Type',
+      request: { method, url, headers: Object.fromEntries(Object.entries(headers).filter(([hk]) => hk !== 'Content-Type')), data: body ?? null },
+      expectStatus: 400,
+      negative: true
+    });
+  }
+
+  return cases;
+}
+
+async function executeApiTests(testCases) {
+  const results = [];
+  for (const tc of testCases) {
+    const start = Date.now();
+    try {
+      const cfg = {
+        method: (tc.request.method || 'GET').toLowerCase(),
+        url: tc.request.url,
+        headers: tc.request.headers || {},
+        timeout: 30000
+      };
+      if (tc.request.data !== null && cfg.method !== 'get') {
+        cfg.data = tc.request.data;
+      }
+      const resp = await axios(cfg);
+      const duration = Date.now() - start;
+      const status = resp.status;
+      const body = resp.data;
+      const rawCode = (body && typeof body === 'object') ? (body.code ?? body?.data?.code ?? body?.statusCode) : undefined;
+      const normCode = rawCode == null ? undefined : String(rawCode).padStart(6, '0');
+      const isCodePass = normCode === '000000';
+      const success = isCodePass;
+      results.push({
+        name: tc.name,
+        status,
+        duration,
+        success,
+        response: body,
+        code: normCode,
+        request: tc.request
+      });
+    } catch (err) {
+      const duration = Date.now() - start;
+      const status = err.response?.status || 0;
+      const success = false;
+      results.push({
+        name: tc.name,
+        status: status || 'Error',
+        duration,
+        success,
+        response: err.response?.data || { error: err.message },
+        code: (err.response?.data && (err.response.data.code != null ? String(err.response.data.code).padStart(6, '0') : undefined)) || undefined,
+        request: tc.request
+      });
+    }
+  }
+  const summary = {
+    total: results.length,
+    passed: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).length,
+    passRate: results.length ? Math.round(results.filter(r => r.success).length / results.length * 100) : 0
+  };
+  return { summary, results };
+}
+
+// 服务端代理请求，避免浏览器跨域限制
+app.post('/api/proxy-request', async (req, res) => {
+  try {
+    const { method, url, headers, data, timeout } = req.body || {};
+    if (!url || !/^https?:\/\//i.test(url)) {
+      return res.status(400).json({ success: false, error: 'URL无效，仅支持http/https' });
+    }
+    const m = (method || 'GET').toLowerCase();
+    const start = Date.now();
+    const cfg = { method: m, url, headers: headers || {}, timeout: timeout || 30000, validateStatus: () => true };
+    if (m !== 'get' && data !== undefined) cfg.data = data;
+    const resp = await axios(cfg);
+    const duration = Date.now() - start;
+    res.json({ success: true, status: resp.status, data: resp.data, headers: resp.headers, duration, request: { method: method || 'GET', url, headers: headers || {}, body: data ?? null } });
+  } catch (error) {
+    const duration = typeof error.config?.startTime === 'number' ? Date.now() - error.config.startTime : undefined;
+    res.status(200).json({ success: false, status: 'Error', error: error.message, duration, request: { method: req.body?.method || 'GET', url: req.body?.url, headers: req.body?.headers || {}, body: req.body?.data ?? null } });
+  }
+});
+
 // 生成测试用例的API
 app.post('/api/generate', upload.single('file'), async (req, res) => {
   console.log('收到生成请求:', req.body);
@@ -960,6 +1196,66 @@ app.post('/api/generate-api-test', async (req, res) => {
       success: false,
       error: error.message || '生成API测试用例失败，请稍后重试' 
     });
+  }
+});
+
+// 根据cURL生成组合用例并自动执行
+app.post('/api/execute-api-tests', async (req, res) => {
+  try {
+    const { curl } = req.body;
+    if (!curl || !curl.trim()) {
+      return res.status(400).json({ success: false, error: '请提供有效的cURL命令' });
+    }
+    const baseReq = parseCurlToRequest(curl);
+    const cases = generateCombinationCases(baseReq);
+    const { summary, results } = await executeApiTests(cases);
+    res.json({ success: true, summary, results, baseRequest: baseReq });
+  } catch (error) {
+    console.error('执行API测试失败:', error);
+    res.status(500).json({ success: false, error: error.message || '执行失败' });
+  }
+});
+
+app.post('/api/execute-api-tests-multi', async (req, res) => {
+  try {
+    const { curls } = req.body;
+    if (!Array.isArray(curls) || curls.length === 0) {
+      return res.status(400).json({ success: false, error: '请提供cURL命令列表' });
+    }
+    const allResults = [];
+    const baseRequests = [];
+    for (let i = 0; i < curls.length; i++) {
+      const c = (curls[i] || '').trim();
+      if (!c) continue;
+      const baseReq = parseCurlToRequest(c);
+      baseRequests.push(baseReq);
+      const cases = generateCombinationCases(baseReq);
+      const { results } = await executeApiTests(cases);
+      results.forEach(r => allResults.push({ ...r, groupIndex: i + 1 }));
+    }
+    const summary = {
+      total: allResults.length,
+      passed: allResults.filter(r => r.success).length,
+      failed: allResults.filter(r => !r.success).length,
+      passRate: allResults.length ? Math.round(allResults.filter(r => r.success).length / allResults.length * 100) : 0
+    };
+    res.json({ success: true, summary, results: allResults, baseRequests });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message || '执行失败' });
+  }
+});
+
+// 解析cURL为结构化请求（仅解析不执行）
+app.post('/api/parse-curl', async (req, res) => {
+  try {
+    const { curl } = req.body;
+    if (!curl || !curl.trim()) {
+      return res.status(400).json({ success: false, error: '请提供cURL命令' });
+    }
+    const baseReq = parseCurlToRequest(curl);
+    res.json({ success: true, request: baseReq });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message || '解析失败' });
   }
 });
 

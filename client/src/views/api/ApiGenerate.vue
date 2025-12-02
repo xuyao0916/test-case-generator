@@ -158,29 +158,24 @@ export default {
       apiDoc: ''
     })
     
-    // 添加接口输入框
     const addApiInput = () => {
       generateForm.apiList.push({ name: '', command: '' })
     }
     
-    // 删除接口输入框
     const removeApiInput = (index) => {
       if (generateForm.apiList.length > 1) {
         generateForm.apiList.splice(index, 1)
       }
     }
     
-    // 生成测试用例
     const generateTestCases = async () => {
       if (generateForm.inputType === 'curl') {
-        // 验证接口列表
         const hasValidApi = generateForm.apiList.some(api => api.name.trim() && api.command.trim())
         if (!hasValidApi) {
           ElMessage.warning('请至少输入一个完整的接口（包含接口名称和cURL命令）')
           return
         }
         
-        // 检查是否有不完整的接口
         const incompleteApis = generateForm.apiList.filter(api => 
           (api.name.trim() && !api.command.trim()) || (!api.name.trim() && api.command.trim())
         )
@@ -207,17 +202,14 @@ export default {
         let requestData = {}
         
         if (generateForm.inputType === 'curl') {
-          // 处理多个接口的情况
           const validApis = generateForm.apiList.filter(api => api.name.trim() && api.command.trim())
           
           if (validApis.length === 1) {
-            // 单个接口，使用原有格式
             requestData = {
               apiName: validApis[0].name.trim(),
               curlCommands: validApis[0].command.trim()
             }
           } else {
-            // 多个接口，组合名称和命令
             const apiNames = validApis.map(api => api.name.trim()).join('、')
             const curlCommands = validApis
               .map((api, index) => `# ${api.name.trim()}\n${api.command.trim()}`)
@@ -238,7 +230,6 @@ export default {
         const response = await axios.post('/api/generate-api-test', requestData)
         
         if (response.data.success) {
-          // 将Markdown转换为HTML显示
           result.value = markdownToHtml(response.data.content)
           downloadUrl.value = response.data.downloadUrl || ''
           ElMessage.success('测试用例生成成功！')
@@ -253,7 +244,6 @@ export default {
       }
     }
     
-    // 清空表单
     const clearForm = () => {
       generateForm.inputType = ''
       generateForm.apiList = [{ name: '', command: '' }]
@@ -263,7 +253,6 @@ export default {
       downloadUrl.value = ''
     }
     
-    // 简单的Markdown转HTML
     const markdownToHtml = (markdown) => {
       return markdown
         .replace(/^### (.*$)/gim, '<h3>$1</h3>')
@@ -278,10 +267,8 @@ export default {
         .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
     }
     
-    // 复制结果
     const copyResult = async () => {
       try {
-        // 将HTML转回纯文本
         const textContent = result.value
           .replace(/<[^>]*>/g, '')
           .replace(/<br>/g, '\n')
@@ -292,10 +279,8 @@ export default {
       }
     }
     
-    // 下载结果
     const downloadResult = async () => {
       try {
-        // 如果有downloadUrl，直接下载Excel文件
         if (downloadUrl.value) {
           const link = document.createElement('a')
           link.href = downloadUrl.value
@@ -307,7 +292,6 @@ export default {
           return
         }
         
-        // 否则下载文本文件（兼容旧版本）
         const textContent = result.value
           .replace(/<[^>]*>/g, '')
           .replace(/<br>/g, '\n')
@@ -351,8 +335,10 @@ export default {
 }
 
 .page-card {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .card-header h2 {

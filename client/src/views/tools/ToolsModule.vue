@@ -239,16 +239,13 @@ export default {
     Delete
   },
   setup() {
-    // 工具选择
     const selectedTool = ref('format-converter')
     
-    // 根据URL参数设置默认工具
     const route = useRoute()
     if (route.query.tool === 'file-info') {
       selectedTool.value = 'file-info'
     }
     
-    // 格式转换相关
     const converterUploadRef = ref()
     const converterFile = ref(null)
     const converting = ref(false)
@@ -263,30 +260,27 @@ export default {
       description: ''
     })
 
-    // 文件信息相关
     const fileInfoUploadRef = ref()
     const fileInfoList = ref([])
     const fileInfoResults = ref([])
 
-    // 格式转换 - 文件变化处理
     const handleConverterFileChange = (file) => {
       converterFile.value = file
       convertForm.fileName = file.name.replace(/\.[^/.]+$/, '') + '-converted'
       ElMessage.success('文件上传成功，请设置转换选项')
     }
 
-    // 格式转换 - 上传前验证
     const beforeConverterUpload = (file) => {
       const allowedTypes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-        'application/vnd.ms-excel', // xls
-        'application/vnd.xmind.workbook', // xmind
-        'text/plain', // txt
-        'text/markdown', // md
-        'application/json', // json
-        'application/xml', // xml
-        'text/xml', // xml
-        'text/csv' // csv
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+        'application/vnd.xmind.workbook',
+        'text/plain',
+        'text/markdown',
+        'application/json',
+        'application/xml',
+        'text/xml',
+        'text/csv'
       ]
       
       const isValidType = allowedTypes.includes(file.type) || 
@@ -307,12 +301,10 @@ export default {
       return true
     }
 
-    // 格式转换 - 文件数量超限处理
     const handleConverterExceed = () => {
       ElMessage.warning('只能上传一个文件，请先删除已上传的文件')
     }
 
-    // 格式转换 - 清空文件
     const clearConverterFile = () => {
       converterUploadRef.value.clearFiles()
       converterFile.value = null
@@ -323,7 +315,6 @@ export default {
       testCaseCount.value = 0
     }
 
-    // 格式转换 - 转换文件
     const convertFile = async () => {
       if (!converterFile.value) {
         ElMessage.error('请先上传文件')
@@ -347,12 +338,11 @@ export default {
           headers: {
             'Content-Type': 'multipart/form-data'
           },
-          timeout: 120000 // 2分钟超时
+          timeout: 120000
         })
         
         if (response.data.success) {
           convertResult.value = response.data.content
-          // 简单计算测试用例数量（通过统计TC-开头的行数）
           const tcMatches = response.data.content.match(/TC-\d+/g)
           testCaseCount.value = tcMatches ? tcMatches.length : 0
           converterDownloadUrl.value = response.data.downloadUrl
@@ -368,14 +358,12 @@ export default {
       }
     }
 
-    // 格式转换 - 预览结果
     const previewConverterResult = () => {
       if (!convertResult.value) {
         ElMessage.error('没有可预览的内容')
         return
       }
       
-      // 将Markdown转换为HTML显示
       previewHtml.value = convertResult.value
         .replace(/\n/g, '<br>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -387,7 +375,6 @@ export default {
       previewVisible.value = true
     }
 
-    // 格式转换 - 下载结果
     const downloadConverterResult = () => {
       if (!converterDownloadUrl.value) {
         ElMessage.error('没有可下载的文件')
@@ -404,7 +391,6 @@ export default {
       ElMessage.success('文件下载成功')
     }
 
-    // 文件信息 - 文件变化处理
     const handleFileInfoChange = async (file) => {
       try {
         const fileInfo = await processFileInfo(file.raw)
@@ -416,7 +402,6 @@ export default {
       }
     }
 
-    // 文件信息 - 文件移除处理
     const handleFileInfoRemove = (file) => {
       const index = fileInfoResults.value.findIndex(f => f.fileName === file.name)
       if (index > -1) {
@@ -424,12 +409,10 @@ export default {
       }
     }
 
-    // 文件信息 - 文件数量超限处理
     const handleFileInfoExceed = () => {
       ElMessage.warning('最多只能上传20个文件')
     }
 
-    // 处理文件信息
     const processFileInfo = (file) => {
       return new Promise((resolve, reject) => {
         const reader = new FileReader()
@@ -439,10 +422,8 @@ export default {
             const arrayBuffer = e.target.result
             const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer)
             
-            // 计算完整文件的MD5
             const fullHash = CryptoJS.MD5(wordArray).toString()
             
-            // 计算前256KB的MD5
             const shortSize = Math.min(arrayBuffer.byteLength, 256 * 1024)
             const shortWordArray = CryptoJS.lib.WordArray.create(arrayBuffer.slice(0, shortSize))
             const shortHash = CryptoJS.MD5(shortWordArray).toString()
@@ -469,7 +450,6 @@ export default {
       })
     }
 
-    // 格式化文件大小
     const formatFileSize = (bytes) => {
       if (bytes === 0) return '0 Bytes'
       const k = 1024
@@ -478,7 +458,6 @@ export default {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
     }
 
-    // 获取文件类型标签
     const getFileTypeTag = (mimeType) => {
       if (mimeType.startsWith('image/')) return 'success'
       if (mimeType.startsWith('video/')) return 'warning'
@@ -490,7 +469,6 @@ export default {
       return 'info'
     }
 
-    // 复制到剪贴板
     const copyToClipboard = async (text) => {
       try {
         await navigator.clipboard.writeText(text)
@@ -501,7 +479,6 @@ export default {
       }
     }
 
-    // 清空所有文件信息
     const clearAllFileInfo = () => {
       fileInfoUploadRef.value.clearFiles()
       fileInfoList.value = []
@@ -509,7 +486,6 @@ export default {
       ElMessage.success('已清空所有文件信息')
     }
 
-    // 导出文件信息
     const exportFileInfo = () => {
       if (fileInfoResults.value.length === 0) {
         ElMessage.warning('没有文件信息可导出')
@@ -772,7 +748,6 @@ export default {
   font-size: 16px;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
   .tools-module {
     padding: 10px;
