@@ -4,52 +4,52 @@ const routes = [
   {
     path: '/functional/generate',
     name: 'FunctionalGenerate',
-    component: () => import('../views/TestCaseGenerator.vue')
+    component: () => import('../views/functional/TestCaseGenerator.vue')
   },
   {
     path: '/functional/step-by-step',
     name: 'StepByStepGenerate',
-    component: () => import('../views/StepByStepGenerator.vue')
+    component: () => import('../views/functional/StepByStepGenerator.vue')
   },
   {
     path: '/functional/history',
     name: 'FunctionalHistory',
-    component: () => import('../views/History.vue')
+    component: () => import('../views/functional/History.vue')
   },
   {
     path: '/review/testcase',
     name: 'TestCaseReview',
-    component: () => import('../views/TestCaseReview.vue')
+    component: () => import('../views/review/TestCaseReview.vue')
   },
   {
     path: '/review/requirement',
     name: 'RequirementReview',
-    component: () => import('../views/RequirementReview.vue')
+    component: () => import('../views/review/RequirementReview.vue')
   },
   {
     path: '/tools/main',
     name: 'ToolsModule',
-    component: () => import('../views/ToolsModule.vue')
+    component: () => import('../views/tools/ToolsModule.vue')
   },
   {
     path: '/api/test',
     name: 'ApiTest',
-    component: () => import('../views/ApiTest.vue')
+    component: () => import('../views/api/ApiTest.vue')
   },
   {
     path: '/api/wss',
     name: 'WssTest',
-    component: () => import('../views/WssTest.vue')
+    component: () => import('../views/api/WssTest.vue')
   },
   {
     path: '/api/generate',
     name: 'ApiGenerate',
-    component: () => import('../views/ApiGenerate.vue')
+    component: () => import('../views/api/ApiGenerate.vue')
   },
   {
     path: '/api/docs',
     name: 'ApiDocs',
-    component: () => import('../views/ApiDocs.vue')
+    component: () => import('../views/api/ApiDocs.vue')
   },
   {
     path: '/',

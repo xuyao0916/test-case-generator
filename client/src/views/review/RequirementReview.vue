@@ -59,23 +59,6 @@
           />
         </div>
 
-        <!-- 文件内容预览 -->
-        <!-- <div v-if="fileContents.length > 0" class="file-contents-preview">
-          <h3>文件内容预览</h3>
-          <el-collapse v-model="activeFileNames">
-            <el-collapse-item v-for="(fileContent, index) in fileContents" :key="index" :title="fileContent.fileName" :name="fileContent.fileName">
-              <el-input
-                :value="fileContent.content"
-                type="textarea"
-                :rows="8"
-                placeholder="文件内容将在这里显示..."
-                readonly
-                class="file-content-textarea"
-              />
-            </el-collapse-item>
-          </el-collapse>
-        </div> -->
-
         <!-- 操作按钮 -->
         <div class="action-section">
           <el-button
@@ -170,14 +153,12 @@ export default {
   },
   methods: {
     handleFileChange(file) {
-      // 文件大小检查（10MB）
       const isLt10M = file.size / 1024 / 1024 < 10
       if (!isLt10M) {
         ElMessage.error('文件大小不能超过 10MB!')
         return false
       }
       
-      // 文件类型检查
       const allowedTypes = ['.txt', '.md', '.docx', '.doc', '.pdf', '.xlsx', '.xls', '.json', '.xml', '.csv']
       const fileName = file.name.toLowerCase()
       const isValidType = allowedTypes.some(type => fileName.endsWith(type))
@@ -189,7 +170,6 @@ export default {
       
       this.uploadedFiles.push(file.raw)
       
-      // 读取文件内容
       const reader = new FileReader()
       reader.onload = (e) => {
         const fileContent = {
@@ -212,13 +192,11 @@ export default {
         this.uploadedFiles.splice(index, 1)
       }
       
-      // 移除文件内容
       const contentIndex = this.fileContents.findIndex(f => f.fileName === file.name)
       if (contentIndex > -1) {
         this.fileContents.splice(contentIndex, 1)
       }
       
-      // 移除激活状态
       const nameIndex = this.activeFileNames.indexOf(file.name)
       if (nameIndex > -1) {
         this.activeFileNames.splice(nameIndex, 1)
@@ -239,7 +217,6 @@ export default {
           formData.append('files', file)
         })
         
-        // 添加文本输入内容
         if (this.textInput.trim()) {
           formData.append('content', this.textInput.trim())
         }
@@ -262,11 +239,8 @@ export default {
         }
       } catch (error) {
         console.error('评审失败:', error)
-        // 显示具体的错误信息，不提供兜底内容
         const errorMessage = error.response?.data?.error || error.message || '需求评审失败，请稍后重试'
         ElMessage.error(errorMessage)
-        
-        // 清空之前的结果
         this.reviewResult = null
         this.downloadUrl = ''
       } finally {
@@ -537,7 +511,6 @@ export default {
   color: #495057;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
   .requirement-review {
     padding: 10px;

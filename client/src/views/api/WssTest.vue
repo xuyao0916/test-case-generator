@@ -160,7 +160,6 @@ export default {
   name: 'WssTest',
   data() {
     return {
-      // 常识问题库
       questionBank: [
         '今天天气怎么样？',
         '请介绍一下中国的首都',
@@ -189,13 +188,11 @@ export default {
         '什么是大数据？'
       ],
       
-      // 批量测试状态
       batchTesting: false,
       batchProgress: 0,
       batchTestResults: [],
-      batchTestRounds: 3, // 全局批量测试轮次配置
+      batchTestRounds: 3,
       
-      // WSS接口配置列表
       wssConfigs: [
         {
           name: 'CybotStar多轮对话测试',
@@ -207,7 +204,6 @@ export default {
             question: '你帮我写一个10句诗词'
           },
           
-          // 运行时状态
           connected: false,
           connecting: false,
           testing: false,
@@ -225,7 +221,6 @@ export default {
             question: '你帮我写一个10句诗词'
           },
           
-          // 运行时状态
           connected: false,
           connecting: false,
           testing: false,
@@ -243,7 +238,6 @@ export default {
             question: '你帮我写一个10句诗词'
           },
           
-          // 运行时状态
           connected: false,
           connecting: false,
           testing: false,
@@ -262,7 +256,6 @@ export default {
             question: '你帮我写一个10句诗词'
           },
           
-          // 运行时状态
           connected: false,
           connecting: false,
           testing: false,
@@ -273,7 +266,6 @@ export default {
         }
       ],
       
-      // 添加新接口表单
       newInterfaceForm: {
         name: '',
         url: '',
@@ -282,7 +274,6 @@ export default {
     }
   },
   methods: {
-    // 测试所有接口
     async testAllInterfaces() {
       if (this.wssConfigs.length === 0) {
         ElMessage.warning('没有可测试的接口')
@@ -299,27 +290,21 @@ export default {
           this.batchProgress = Math.round((i / this.wssConfigs.length) * 100)
           
           try {
-            // 如果未连接，先连接
             if (!config.connected) {
               await this.connectInterface(i)
-              await this.sleep(1000) // 等待连接稳定
+              await this.sleep(1000)
             }
             
-            // 执行多轮测试
             if (config.connected) {
-              const rounds = this.batchTestRounds || 1 // 使用全局轮次配置
+              const rounds = this.batchTestRounds || 1
               let successCount = 0
-              const originalQuestion = config.testParams.question // 保存原始问题
+              const originalQuestion = config.testParams.question
               
               for (let round = 1; round <= rounds; round++) {
                 try {
-                  // 为每轮对话生成随机问题
                   config.testParams.question = this.getRandomQuestion()
-                  
                   await this.testSingleInterface(i)
                   successCount++
-                  
-                  // 轮次间隔
                   if (round < rounds) {
                     await this.sleep(1000)
                   }
@@ -328,7 +313,6 @@ export default {
                 }
               }
               
-              // 恢复原始问题
               config.testParams.question = originalQuestion
               
               this.batchTestResults.push({ 
@@ -351,13 +335,12 @@ export default {
             })
           }
           
-          await this.sleep(500) // 接口间隔
+          await this.sleep(500)
         }
         
         this.batchProgress = 100
         ElMessage.success(`批量测试完成！成功: ${this.batchTestResults.filter(r => r.success).length}, 失败: ${this.batchTestResults.filter(r => !r.success).length}`)
         
-        // 测试完成后断开所有连接
         await this.disconnectAllInterfaces()
       } catch (error) {
         ElMessage.error(`批量测试失败: ${error.message}`)
@@ -366,7 +349,6 @@ export default {
       }
     },
 
-    // 切换连接状态
     async toggleConnection(index) {
       const config = this.wssConfigs[index]
       if (config.connected) {
@@ -376,7 +358,6 @@ export default {
       }
     },
 
-    // 连接接口
     async connectInterface(index) {
       const config = this.wssConfigs[index]
       
@@ -472,7 +453,6 @@ export default {
       }
     },
 
-    // 断开连接
     disconnectInterface(index) {
       const config = this.wssConfigs[index]
       
@@ -486,7 +466,6 @@ export default {
       ElMessage.info(`${config.name} 已断开连接`)
     },
 
-    // 断开所有连接
     async disconnectAllInterfaces() {
       let disconnectedCount = 0
       
@@ -495,7 +474,7 @@ export default {
         if (config.connected) {
           this.disconnectInterface(i)
           disconnectedCount++
-          await this.sleep(200) // 短暂延迟，避免同时断开太多连接
+          await this.sleep(200)
         }
       }
       
@@ -504,7 +483,6 @@ export default {
       }
     },
 
-    // 测试单个接口
     async testSingleInterface(index) {
       const config = this.wssConfigs[index]
       
@@ -528,7 +506,6 @@ export default {
         
         ElMessage.success(`${config.name} 测试消息发送成功`)
         
-        // 等待响应
         await this.sleep(2000)
       } catch (error) {
         ElMessage.error(`${config.name} 测试失败: ${error.message}`)
@@ -546,20 +523,17 @@ export default {
       }
     },
 
-    // 添加消息到指定接口
     addMessage(index, message) {
       if (!this.wssConfigs[index].messages) {
         this.$set(this.wssConfigs[index], 'messages', [])
       }
       this.wssConfigs[index].messages.unshift(message)
       
-      // 限制消息数量
       if (this.wssConfigs[index].messages.length > 100) {
         this.wssConfigs[index].messages = this.wssConfigs[index].messages.slice(0, 100)
       }
     },
 
-    // 添加新接口
     addNewInterface() {
       if (!this.newInterfaceForm.name || !this.newInterfaceForm.url) {
         ElMessage.warning('请填写接口名称和地址')
@@ -594,7 +568,6 @@ export default {
       this.resetForm()
     },
 
-    // 重置表单
     resetForm() {
       this.newInterfaceForm = {
         name: '',
@@ -603,12 +576,10 @@ export default {
       }
     },
 
-    // 工具方法
     sleep(ms) {
       return new Promise(resolve => setTimeout(resolve, ms))
     },
 
-    // 随机获取问题
     getRandomQuestion() {
       const randomIndex = Math.floor(Math.random() * this.questionBank.length)
       return this.questionBank[randomIndex]
@@ -645,7 +616,6 @@ export default {
   },
 
   beforeUnmount() {
-    // 组件销毁前关闭所有连接
     this.wssConfigs.forEach((config, index) => {
       if (config.connected) {
         this.disconnectInterface(index)
