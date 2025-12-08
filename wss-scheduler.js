@@ -453,12 +453,12 @@ async function executeScheduledWssTest() {
 let scheduledTask = null;
 
 /**
- * 启动定时任务（每天早上9:20执行）
+ * 启动定时任务（每天早上8:50执行）
  */
 function startScheduledTask() {
-  // 每天早上9:20执行
+  // 每天早上8:50执行
   // node-cron格式: 分 时 日 月 周 (5字段格式)
-  const cronExpression = '20 9 * * *'; // 每天9:20执行
+  const cronExpression = '50 8 * * *'; // 每天8:50执行
   
   if (scheduledTask) {
     scheduledTask.stop();
@@ -471,7 +471,7 @@ function startScheduledTask() {
     timezone: 'Asia/Shanghai'
   });
 
-  console.log('WSS定时任务已启动，将在每天早上9:20执行');
+  console.log('WSS定时任务已启动，将在每天早上8:50执行');
   return scheduledTask;
 }
 
@@ -494,8 +494,8 @@ function stopScheduledTask() {
 function getScheduledTaskStatus() {
   return {
     running: scheduledTask !== null,
-    nextExecution: scheduledTask ? '每天 09:20:00' : null,
-    cronExpression: '20 9 * * *'
+    nextExecution: scheduledTask ? '每天 08:50:00' : null,
+    cronExpression: '50 8 * * *'
   };
 }
 
