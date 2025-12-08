@@ -458,7 +458,7 @@ let scheduledTask = null;
 function startScheduledTask() {
   // 每天早上9:20执行
   // node-cron格式: 分 时 日 月 周 (5字段格式)
-  const cronExpression = '50 8 * * *'; // 每天8:50执行
+  const cronExpression = '20 9 * * *'; // 每天9:20执行
   
   if (scheduledTask) {
     scheduledTask.stop();
