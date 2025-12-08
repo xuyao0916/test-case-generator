@@ -2,7 +2,7 @@
   "name": "test-case-generator",
   "version": "1.0.0",
   "description": "测试用例自动生成平台",
-  "main": "server.js",
+  "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
