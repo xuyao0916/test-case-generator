@@ -20,9 +20,9 @@
               type="primary" 
               :loading="batchTesting" 
               @click="testAllInterfaces"
-              :disabled="wssConfigs.length === 0"
+              :disabled="currentTabConfigs.length === 0"
             >
-              {{ batchTesting ? '测试中...' : '测试所有接口' }}
+              {{ batchTesting ? '测试中...' : '立即测试' }}
             </el-button>
           </div>
         </div>
@@ -42,10 +42,12 @@
       </div>
     </el-card>
 
-    <!-- WSS接口配置列表 -->
-    <div class="interface-list">
+    <!-- Tab分类 -->
+    <el-tabs v-model="activeTab" type="border-card" class="wss-tabs">
+      <el-tab-pane label="国内生产" name="domestic">
+        <div class="interface-list">
       <el-card 
-        v-for="(config, index) in wssConfigs" 
+        v-for="(config, index) in domesticConfigs" 
         :key="index" 
         class="interface-card"
         :class="{ 'testing': config.testing, 'connected': config.connected }"
@@ -63,7 +65,7 @@
                 size="small" 
                 :type="config.connected ? 'danger' : 'primary'"
                 :loading="config.connecting"
-                @click="toggleConnection(index)"
+                @click="toggleConnection('domestic', index)"
               >
                 {{ config.connected ? '断开' : '连接' }}
               </el-button>
@@ -72,7 +74,7 @@
                 type="success"
                 :loading="config.testing"
                 :disabled="!config.connected"
-                @click="testSingleInterface(index)"
+                @click="testSingleInterface('domestic', index)"
               >
                 {{ config.testing ? '测试中' : '测试' }}
               </el-button>
@@ -121,7 +123,173 @@
           </div>
         </div>
       </el-card>
-    </div>
+        </div>
+      </el-tab-pane>
+
+      <el-tab-pane label="hsbc" name="hsbc">
+        <div class="interface-list">
+          <el-card 
+            v-for="(config, index) in hsbcConfigs" 
+            :key="index" 
+            class="interface-card"
+            :class="{ 'testing': config.testing, 'connected': config.connected }"
+          >
+            <template #header>
+              <div class="interface-header">
+                <div class="interface-info">
+                  <h3>{{ config.name }}</h3>
+                  <el-tag :type="getStatusType(config.status)" size="small">
+                    {{ config.status }}
+                  </el-tag>
+                </div>
+                <div class="interface-actions">
+                  <el-button 
+                    size="small" 
+                    :type="config.connected ? 'danger' : 'primary'"
+                    :loading="config.connecting"
+                    @click="toggleConnection('hsbc', index)"
+                  >
+                    {{ config.connected ? '断开' : '连接' }}
+                  </el-button>
+                  <el-button 
+                    size="small" 
+                    type="success"
+                    :loading="config.testing"
+                    :disabled="!config.connected"
+                    @click="testSingleInterface('hsbc', index)"
+                  >
+                    {{ config.testing ? '测试中' : '测试' }}
+                  </el-button>
+                </div>
+              </div>
+            </template>
+
+            <div class="interface-content">
+              <div class="config-info">
+                <div class="url-info">
+                  <strong>连接地址:</strong> {{ config.url }}
+                </div>
+                <div class="params-info">
+                  <strong>测试参数:</strong>
+                  <pre>{{ JSON.stringify(config.testParams, null, 2) }}</pre>
+                </div>
+              </div>
+
+              <!-- 消息列表 -->
+              <div class="messages-section" v-if="config.messages && config.messages.length > 0">
+                <h4>消息记录 ({{ config.messages.length }})</h4>
+                <div class="messages-container">
+                  <div 
+                    v-for="(message, msgIndex) in config.messages" 
+                    :key="msgIndex"
+                    class="message-item"
+                    :class="message.type"
+                  >
+                    <div class="message-header">
+                      <span class="message-type">{{ getMessageTypeText(message.type) }}</span>
+                      <span class="message-time">{{ formatTime(message.timestamp) }}</span>
+                      <el-tag 
+                        v-if="message.testResult" 
+                        :type="message.testResult.success ? 'success' : 'danger'"
+                        size="small"
+                      >
+                        {{ message.testResult.success ? '成功' : '失败' }}
+                      </el-tag>
+                    </div>
+                    <div class="message-content">{{ message.content }}</div>
+                    <div v-if="message.testResult && message.testResult.note" class="message-note">
+                      {{ message.testResult.note }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </div>
+      </el-tab-pane>
+
+      <el-tab-pane label="hase" name="hase">
+        <div class="interface-list">
+          <el-card 
+            v-for="(config, index) in haseConfigs" 
+            :key="index" 
+            class="interface-card"
+            :class="{ 'testing': config.testing, 'connected': config.connected }"
+          >
+            <template #header>
+              <div class="interface-header">
+                <div class="interface-info">
+                  <h3>{{ config.name }}</h3>
+                  <el-tag :type="getStatusType(config.status)" size="small">
+                    {{ config.status }}
+                  </el-tag>
+                </div>
+                <div class="interface-actions">
+                  <el-button 
+                    size="small" 
+                    :type="config.connected ? 'danger' : 'primary'"
+                    :loading="config.connecting"
+                    @click="toggleConnection('hase', index)"
+                  >
+                    {{ config.connected ? '断开' : '连接' }}
+                  </el-button>
+                  <el-button 
+                    size="small" 
+                    type="success"
+                    :loading="config.testing"
+                    :disabled="!config.connected"
+                    @click="testSingleInterface('hase', index)"
+                  >
+                    {{ config.testing ? '测试中' : '测试' }}
+                  </el-button>
+                </div>
+              </div>
+            </template>
+
+            <div class="interface-content">
+              <div class="config-info">
+                <div class="url-info">
+                  <strong>连接地址:</strong> {{ config.url }}
+                </div>
+                <div class="params-info">
+                  <strong>测试参数:</strong>
+                  <pre>{{ JSON.stringify(config.testParams, null, 2) }}</pre>
+                </div>
+              </div>
+
+              <!-- 消息列表 -->
+              <div class="messages-section" v-if="config.messages && config.messages.length > 0">
+                <h4>消息记录 ({{ config.messages.length }})</h4>
+                <div class="messages-container">
+                  <div 
+                    v-for="(message, msgIndex) in config.messages" 
+                    :key="msgIndex"
+                    class="message-item"
+                    :class="message.type"
+                  >
+                    <div class="message-header">
+                      <span class="message-type">{{ getMessageTypeText(message.type) }}</span>
+                      <span class="message-time">{{ formatTime(message.timestamp) }}</span>
+                      <el-tag 
+                        v-if="message.testResult" 
+                        :type="message.testResult.success ? 'success' : 'danger'"
+                        size="small"
+                      >
+                        {{ message.testResult.success ? '成功' : '失败' }}
+                      </el-tag>
+                    </div>
+                    <div class="message-content">{{ message.content }}</div>
+                    <div v-if="message.testResult && message.testResult.note" class="message-note">
+                      {{ message.testResult.note }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
 
     <!-- 添加新接口配置 -->
     <el-card class="add-interface-card">
@@ -155,6 +323,7 @@
 
 <script>
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
 
 export default {
   name: 'WssTest',
@@ -188,12 +357,14 @@ export default {
         '什么是大数据？'
       ],
       
+      activeTab: 'domestic',
       batchTesting: false,
       batchProgress: 0,
       batchTestResults: [],
       batchTestRounds: 3,
       
-      wssConfigs: [
+      // 国内生产配置
+      domesticConfigs: [
         {
           name: 'CybotStar多轮对话测试',
           url: 'wss://www.cybotstar.cn/openapi/v2/ws/dialog/',
@@ -266,6 +437,78 @@ export default {
         }
       ],
       
+      // hsbc配置
+      hsbcConfigs: [
+        {
+          name: 'hsbc全量',
+          url: 'wss://agent-aws-poc-hsbc.fano.ai/openapi/v2/ws/dialog/',
+          testParams: {
+            'cybertron-robot-token': 'MTc2NDcyOTE2MzYzMgpMVXd0ZkxRZG9Bcjhaa2w0RG01NzVBajlXUk09',
+            'cybertron-robot-key': 'm%2F51ww1SLa0iQmU2ruwwn13Cmi4%3D',
+            username: '1000_tao.yu200@brgroup.com',
+            question: '你帮我写一个10句诗词'
+          },
+          connected: false,
+          connecting: false,
+          testing: false,
+          status: '未连接',
+          websocket: null,
+          messages: []
+        },
+        {
+          name: 'hsbc轻量',
+          url: 'wss://agent-aws-poc-hsbc.fano.ai/openapi/ws/agent-dialog/lightweight-beta/dialog/',
+          testParams: {
+            'cybertron-robot-token': 'MTc2NDcyOTE2MzYzMgpMVXd0ZkxRZG9Bcjhaa2w0RG01NzVBajlXUk09',
+            'cybertron-robot-key': 'm%2F51ww1SLa0iQmU2ruwwn13Cmi4%3D',
+            username: '1000_tao.yu200@brgroup.com',
+            question: '你帮我写一个10句诗词'
+          },
+          connected: false,
+          connecting: false,
+          testing: false,
+          status: '未连接',
+          websocket: null,
+          messages: []
+        }
+      ],
+      
+      // hase配置
+      haseConfigs: [
+        {
+          name: 'hase全量',
+          url: 'wss://agent-aws-poc-hase.fano.ai/openapi/v2/ws/dialog/',
+          testParams: {
+            'cybertron-robot-token': 'MTc2NDczMDIyMDAzMwpSQmFrZVk2NGlVL2NibTNxaUhFVzBtWnlLZm89',
+            'cybertron-robot-key': 'vGsgi4TOGgUl7t6yy9bK6Q2jdk0%3D',
+            username: '1000_tao.yu200@brgroup.com',
+            question: '你帮我写一个10句诗词'
+          },
+          connected: false,
+          connecting: false,
+          testing: false,
+          status: '未连接',
+          websocket: null,
+          messages: []
+        },
+        {
+          name: 'hase轻量',
+          url: 'wss://agent-aws-poc-hase.fano.ai/openapi/ws/agent-dialog/lightweight-beta/dialog/',
+          testParams: {
+            'cybertron-robot-token': 'MTc2NDczMDIyMDAzMwpSQmFrZVk2NGlVL2NibTNxaUhFVzBtWnlLZm89',
+            'cybertron-robot-key': 'vGsgi4TOGgUl7t6yy9bK6Q2jdk0%3D',
+            username: '1000_tao.yu200@brgroup.com',
+            question: '你帮我写一个10句诗词'
+          },
+          connected: false,
+          connecting: false,
+          testing: false,
+          status: '未连接',
+          websocket: null,
+          messages: []
+        }
+      ],
+      
       newInterfaceForm: {
         name: '',
         url: '',
@@ -273,9 +516,22 @@ export default {
       }
     }
   },
+  computed: {
+    currentTabConfigs() {
+      if (this.activeTab === 'domestic') {
+        return this.domesticConfigs
+      } else if (this.activeTab === 'hsbc') {
+        return this.hsbcConfigs
+      } else if (this.activeTab === 'hase') {
+        return this.haseConfigs
+      }
+      return []
+    }
+  },
   methods: {
     async testAllInterfaces() {
-      if (this.wssConfigs.length === 0) {
+      const configs = this.currentTabConfigs
+      if (configs.length === 0) {
         ElMessage.warning('没有可测试的接口')
         return
       }
@@ -285,13 +541,13 @@ export default {
       this.batchTestResults = []
 
       try {
-        for (let i = 0; i < this.wssConfigs.length; i++) {
-          const config = this.wssConfigs[i]
-          this.batchProgress = Math.round((i / this.wssConfigs.length) * 100)
+        for (let i = 0; i < configs.length; i++) {
+          const config = configs[i]
+          this.batchProgress = Math.round((i / configs.length) * 100)
           
           try {
             if (!config.connected) {
-              await this.connectInterface(i)
+              await this.connectInterface(this.activeTab, i)
               await this.sleep(1000)
             }
             
@@ -303,7 +559,7 @@ export default {
               for (let round = 1; round <= rounds; round++) {
                 try {
                   config.testParams.question = this.getRandomQuestion()
-                  await this.testSingleInterface(i)
+                  await this.testSingleInterface(this.activeTab, i)
                   successCount++
                   if (round < rounds) {
                     await this.sleep(1000)
@@ -339,7 +595,12 @@ export default {
         }
         
         this.batchProgress = 100
-        ElMessage.success(`批量测试完成！成功: ${this.batchTestResults.filter(r => r.success).length}, 失败: ${this.batchTestResults.filter(r => !r.success).length}`)
+        const successCount = this.batchTestResults.filter(r => r.success).length
+        const failCount = this.batchTestResults.filter(r => !r.success).length
+        ElMessage.success(`批量测试完成！成功: ${successCount}, 失败: ${failCount}`)
+        
+        // 发送钉钉通知
+        await this.sendDingTalkNotification()
         
         await this.disconnectAllInterfaces()
       } catch (error) {
@@ -349,17 +610,28 @@ export default {
       }
     },
 
-    async toggleConnection(index) {
-      const config = this.wssConfigs[index]
+    async toggleConnection(tab, index) {
+      const config = this.getConfigByTab(tab, index)
       if (config.connected) {
-        this.disconnectInterface(index)
+        this.disconnectInterface(tab, index)
       } else {
-        await this.connectInterface(index)
+        await this.connectInterface(tab, index)
       }
     },
 
-    async connectInterface(index) {
-      const config = this.wssConfigs[index]
+    getConfigByTab(tab, index) {
+      if (tab === 'domestic') {
+        return this.domesticConfigs[index]
+      } else if (tab === 'hsbc') {
+        return this.hsbcConfigs[index]
+      } else if (tab === 'hase') {
+        return this.haseConfigs[index]
+      }
+      return null
+    },
+
+    async connectInterface(tab, index) {
+      const config = this.getConfigByTab(tab, index)
       
       if (config.connecting || config.connected) {
         return
@@ -384,7 +656,7 @@ export default {
             config.status = '已连接'
             config.websocket = websocket
             
-            this.addMessage(index, {
+            this.addMessage(tab, index, {
               type: 'system',
               content: 'WebSocket连接成功',
               timestamp: new Date(),
@@ -396,7 +668,7 @@ export default {
           }
 
           websocket.onmessage = (event) => {
-            this.addMessage(index, {
+            this.addMessage(tab, index, {
               type: 'received',
               content: event.data,
               timestamp: new Date(),
@@ -409,7 +681,7 @@ export default {
             config.connecting = false
             config.status = '连接失败'
             
-            this.addMessage(index, {
+            this.addMessage(tab, index, {
               type: 'error',
               content: `连接错误: ${error.message || '未知错误'}`,
               timestamp: new Date(),
@@ -426,7 +698,7 @@ export default {
             config.status = '已断开'
             config.websocket = null
             
-            this.addMessage(index, {
+            this.addMessage(tab, index, {
               type: 'system',
               content: `连接关闭 (代码: ${event.code})`,
               timestamp: new Date(),
@@ -442,7 +714,7 @@ export default {
         config.status = '连接失败'
         ElMessage.error(`${config.name} 连接失败: ${error.message}`)
         
-        this.addMessage(index, {
+        this.addMessage(tab, index, {
           type: 'error',
           content: `连接失败: ${error.message}`,
           timestamp: new Date(),
@@ -453,8 +725,8 @@ export default {
       }
     },
 
-    disconnectInterface(index) {
-      const config = this.wssConfigs[index]
+    disconnectInterface(tab, index) {
+      const config = this.getConfigByTab(tab, index)
       
       if (config.websocket) {
         config.websocket.close()
@@ -469,12 +741,20 @@ export default {
     async disconnectAllInterfaces() {
       let disconnectedCount = 0
       
-      for (let i = 0; i < this.wssConfigs.length; i++) {
-        const config = this.wssConfigs[i]
-        if (config.connected) {
-          this.disconnectInterface(i)
-          disconnectedCount++
-          await this.sleep(200)
+      const allConfigs = [
+        { tab: 'domestic', configs: this.domesticConfigs },
+        { tab: 'hsbc', configs: this.hsbcConfigs },
+        { tab: 'hase', configs: this.haseConfigs }
+      ]
+      
+      for (const { tab, configs } of allConfigs) {
+        for (let i = 0; i < configs.length; i++) {
+          const config = configs[i]
+          if (config.connected) {
+            this.disconnectInterface(tab, i)
+            disconnectedCount++
+            await this.sleep(200)
+          }
         }
       }
       
@@ -483,8 +763,8 @@ export default {
       }
     },
 
-    async testSingleInterface(index) {
-      const config = this.wssConfigs[index]
+    async testSingleInterface(tab, index) {
+      const config = this.getConfigByTab(tab, index)
       
       if (!config.connected || !config.websocket) {
         ElMessage.warning('请先连接接口')
@@ -497,7 +777,7 @@ export default {
         const messageContent = JSON.stringify(config.testParams)
         config.websocket.send(messageContent)
         
-        this.addMessage(index, {
+        this.addMessage(tab, index, {
           type: 'sent',
           content: messageContent,
           timestamp: new Date(),
@@ -510,7 +790,7 @@ export default {
       } catch (error) {
         ElMessage.error(`${config.name} 测试失败: ${error.message}`)
         
-        this.addMessage(index, {
+        this.addMessage(tab, index, {
           type: 'error',
           content: `测试失败: ${error.message}`,
           timestamp: new Date(),
@@ -523,14 +803,15 @@ export default {
       }
     },
 
-    addMessage(index, message) {
-      if (!this.wssConfigs[index].messages) {
-        this.$set(this.wssConfigs[index], 'messages', [])
+    addMessage(tab, index, message) {
+      const config = this.getConfigByTab(tab, index)
+      if (!config.messages) {
+        this.$set(config, 'messages', [])
       }
-      this.wssConfigs[index].messages.unshift(message)
+      config.messages.unshift(message)
       
-      if (this.wssConfigs[index].messages.length > 100) {
-        this.wssConfigs[index].messages = this.wssConfigs[index].messages.slice(0, 100)
+      if (config.messages.length > 100) {
+        config.messages = config.messages.slice(0, 100)
       }
     },
 
@@ -562,7 +843,8 @@ export default {
         messages: []
       }
 
-      this.wssConfigs.push(newConfig)
+      const configs = this.currentTabConfigs
+      configs.push(newConfig)
 
       ElMessage.success('接口添加成功')
       this.resetForm()
@@ -612,14 +894,58 @@ export default {
 
     formatProgress(percentage) {
       return `${percentage}%`
+    },
+
+    async sendDingTalkNotification() {
+      if (this.batchTestResults.length === 0) {
+        return
+      }
+
+      try {
+        // 获取当前tab名称
+        const tabNameMap = {
+          domestic: '国内生产',
+          hsbc: 'hsbc',
+          hase: 'hase'
+        }
+        const tabName = tabNameMap[this.activeTab] || '未知'
+
+        // 为测试结果添加tab信息
+        const resultsWithTab = this.batchTestResults.map(result => ({
+          ...result,
+          tab: tabName
+        }))
+
+        const response = await axios.post('/api/wss/send-notification', {
+          title: `WSS接口测试报告 - ${tabName}`,
+          testResults: resultsWithTab
+        })
+
+        if (response.data.success) {
+          ElMessage.success('钉钉通知发送成功')
+        } else {
+          ElMessage.warning('钉钉通知发送失败')
+        }
+      } catch (error) {
+        console.error('发送钉钉通知失败:', error)
+        ElMessage.error('发送钉钉通知失败: ' + (error.message || '未知错误'))
+      }
     }
   },
 
   beforeUnmount() {
-    this.wssConfigs.forEach((config, index) => {
-      if (config.connected) {
-        this.disconnectInterface(index)
-      }
+    const allConfigs = [
+      { tab: 'domestic', configs: this.domesticConfigs },
+      { tab: 'hsbc', configs: this.hsbcConfigs },
+      { tab: 'hase', configs: this.haseConfigs }
+    ]
+    
+    allConfigs.forEach(({ tab, configs }) => {
+      configs.forEach((config, index) => {
+        if (config.connected) {
+          this.disconnectInterface(tab, index)
+        }
+      })
     })
   }
 }
@@ -793,6 +1119,10 @@ export default {
   font-size: 12px;
   color: #909399;
   font-style: italic;
+}
+
+.wss-tabs {
+  margin-bottom: 20px;
 }
 
 .add-interface-card {
