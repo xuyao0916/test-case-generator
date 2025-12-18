@@ -27,9 +27,14 @@ const routes = [
     component: () => import('../views/review/RequirementReview.vue')
   },
   {
-    path: '/tools/main',
-    name: 'ToolsModule',
-    component: () => import('../views/tools/ToolsModule.vue')
+    path: '/tools/format-converter',
+    name: 'FormatConverter',
+    component: () => import('../views/tools/FormatConverter.vue')
+  },
+  {
+    path: '/tools/file-info',
+    name: 'FileInfo',
+    component: () => import('../views/tools/FileInfo.vue')
   },
   {
     path: '/api/test',

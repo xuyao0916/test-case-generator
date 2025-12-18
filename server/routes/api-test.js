@@ -191,4 +191,45 @@ module.exports = function(app) {
       res.status(500).json({ success: false, error: error.message || '解析失败' });
     }
   });
+
+  // 导出测试结果为Excel
+  app.post('/api/export-api-test-results', async (req, res) => {
+    try {
+      const { batchResult } = req.body;
+      if (!batchResult || !batchResult.results || !Array.isArray(batchResult.results)) {
+        return res.status(400).json({ success: false, error: '请提供有效的测试结果数据' });
+      }
+
+      // 将测试结果转换为Excel格式
+      const excelData = batchResult.results.map((result, index) => {
+        const request = result.request || {};
+        return {
+          '用例名称': result.name || `用例${index + 1}`,
+          '请求方法': request.method || 'GET',
+          '请求URL': request.url || '',
+          '请求头': JSON.stringify(request.headers || {}, null, 2),
+          '请求体': JSON.stringify(request.data || request.body || null, null, 2),
+          '状态码': result.status || '',
+          '响应时间(ms)': result.duration || 0,
+          '测试结果': result.success ? '通过' : '失败',
+          '响应内容': JSON.stringify(result.response || {}, null, 2),
+          '业务码': result.code || ''
+        };
+      });
+
+      // 生成Excel文件
+      const timestamp = Date.now();
+      const excelFileName = `api-test-results-${timestamp}.xlsx`;
+      generateExcelFile(excelData, excelFileName);
+
+      res.json({
+        success: true,
+        downloadUrl: `/api/download/${excelFileName}`,
+        fileName: excelFileName
+      });
+    } catch (error) {
+      console.error('导出Excel失败:', error);
+      res.status(500).json({ success: false, error: error.message || '导出失败' });
+    }
+  });
 };

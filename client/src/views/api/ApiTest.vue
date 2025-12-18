@@ -183,11 +183,19 @@
 
       <el-divider>批量测试结果</el-divider>
       <div v-if="batchResult" class="response-section">
-        <el-descriptions :column="3" border>
-          <el-descriptions-item label="用例数">{{ batchResult.summary.total }}</el-descriptions-item>
-          <el-descriptions-item label="通过">{{ batchResult.summary.passed }}</el-descriptions-item>
-          <el-descriptions-item label="通过率">{{ batchResult.summary.passRate }}%</el-descriptions-item>
-        </el-descriptions>
+        <div class="batch-result-header">
+          <el-descriptions :column="3" border>
+            <el-descriptions-item label="用例数">{{ batchResult.summary.total }}</el-descriptions-item>
+            <el-descriptions-item label="通过">{{ batchResult.summary.passed }}</el-descriptions-item>
+            <el-descriptions-item label="通过率">{{ batchResult.summary.passRate }}%</el-descriptions-item>
+          </el-descriptions>
+          <div class="export-button">
+            <el-button type="success" @click="exportToExcel" :loading="exporting">
+              <el-icon><Download /></el-icon>
+              下载Excel
+            </el-button>
+          </div>
+        </div>
         <el-tabs v-model="activeTab" type="border-card" style="margin-top: 12px;">
           <el-tab-pane
             v-for="(grp, idx) in groups"
@@ -251,7 +259,7 @@
 <script>
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Position, RefreshLeft, Plus, Delete } from '@element-plus/icons-vue'
+import { Position, RefreshLeft, Plus, Delete, Download } from '@element-plus/icons-vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 
@@ -261,11 +269,13 @@ export default {
     Position,
     RefreshLeft,
     Plus,
-    Delete
+    Delete,
+    Download
   },
   setup() {
     const loading = ref(false)
     const execLoading = ref(false)
+    const exporting = ref(false)
     const response = ref(null)
     const responseTabs = ref([])
     const activeRespTab = ref('1')
@@ -514,6 +524,38 @@ export default {
       }
     }
 
+    const exportToExcel = async () => {
+      if (!batchResult.value) {
+        ElMessage.warning('没有测试结果可导出')
+        return
+      }
+
+      exporting.value = true
+      try {
+        const response = await axios.post('/api/export-api-test-results', {
+          batchResult: batchResult.value
+        })
+
+        if (response.data.success) {
+          const downloadUrl = response.data.downloadUrl
+          const link = document.createElement('a')
+          link.href = downloadUrl
+          link.download = response.data.fileName || `api-test-results-${Date.now()}.xlsx`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          ElMessage.success('Excel文件下载成功')
+        } else {
+          ElMessage.error(response.data.error || '导出失败')
+        }
+      } catch (error) {
+        console.error('导出失败:', error)
+        ElMessage.error('导出失败：' + (error.message || '未知错误'))
+      } finally {
+        exporting.value = false
+      }
+    }
+
     watch([activeRespTab, responseTabs], () => {
       const idx = Number(activeRespTab.value) - 1
       const item = responseTabs.value && responseTabs.value[idx]
@@ -545,7 +587,9 @@ export default {
       formatResponse,
       parseJSONSafe,
       addCurl,
-      removeCurl
+      removeCurl,
+      exportToExcel,
+      exporting
     }
   }
 }
@@ -616,5 +660,31 @@ export default {
 }
 .curl-list-block {
   width: 100%;
+}
+
+.batch-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 20px;
+}
+
+.export-button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .batch-result-header {
+    flex-direction: column;
+  }
+  
+  .export-button {
+    width: 100%;
+  }
+  
+  .export-button .el-button {
+    width: 100%;
+  }
 }
 </style>

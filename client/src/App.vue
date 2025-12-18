@@ -54,11 +54,11 @@
                  <el-icon><SwitchIcon /></el-icon>
                  <span>工具类</span>
                </template>
-              <el-menu-item index="/tools/main">
+              <el-menu-item index="/tools/format-converter">
                  <el-icon><Upload /></el-icon>
                  <span>格式转换</span>
                </el-menu-item>
-               <el-menu-item index="/tools/main?tool=file-info">
+               <el-menu-item index="/tools/file-info">
                  <el-icon><Document /></el-icon>
                  <span>获取文件信息</span>
                </el-menu-item>
